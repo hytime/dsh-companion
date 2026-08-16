@@ -1,8 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkPrereqs, installMissing } from './prereq-self-heal';
+import {
+  checkPrereqs,
+  installGuidance,
+  installMissing,
+  runSelfHeal,
+  type SelfHealLogger,
+} from './prereq-self-heal';
 
 describe('checkPrereqs', () => {
   let dshHome: string;
@@ -121,5 +127,95 @@ describe('installMissing', () => {
     const result = await installMissing({ missing: ['hyc'], run });
     expect(result.ok).toBe(false);
     expect(result.failures).toContain('hyc');
+  });
+
+  it('run 抛非 ENOENT 错误(如 new Error(\'boom\')) → 统一降级为 failed，不抛出', async () => {
+    const run = () => {
+      throw new Error('boom');
+    };
+    await expect(installMissing({ missing: ['hyc'], run })).resolves.toEqual({
+      ok: false,
+      failures: ['hyc'],
+    });
+  });
+});
+
+describe('runSelfHeal', () => {
+  const readyCheck = async () => ({ hyc: 'ok' as const, skills: 'ok' as const });
+  const okInstall = async () => ({ ok: true, failures: [] });
+
+  /** 收集 log/warn 调用的替身日志。 */
+  function captureLog(): { calls: Array<[string, string[]]>; log: SelfHealLogger } {
+    const calls: Array<[string, string[]]> = [];
+    const log: SelfHealLogger = {
+      log: (...args) => calls.push(['log', args.map(String)]),
+      warn: (...args) => calls.push(['warn', args.map(String)]),
+    };
+    return { calls, log };
+  }
+
+  it('全部就绪 → log 收到「前置就绪(hyc ✓, skills ✓)」，不调用 install', async () => {
+    const { calls, log } = captureLog();
+    const install = vi.fn(okInstall);
+    await runSelfHeal({ check: readyCheck, install, log });
+    expect(install).not.toHaveBeenCalled();
+    expect(calls.some(([m, a]) => m === 'log' && a.includes('[dsh-companion] 前置就绪(hyc ✓, skills ✓)'))).toBe(
+      true,
+    );
+  });
+
+  it('缺失 hyc → missing 数组为 [\'hyc\']，install 收到正确参数', async () => {
+    const { log } = captureLog();
+    const install = vi.fn(okInstall);
+    await runSelfHeal({
+      check: async () => ({ hyc: 'missing' as const, skills: 'ok' as const }),
+      install,
+      log,
+    });
+    expect(install).toHaveBeenCalledWith({ missing: ['hyc'] });
+  });
+
+  it('install 返回失败 → log 收到含手动指引的失败警告', async () => {
+    const { calls, log } = captureLog();
+    await runSelfHeal({
+      check: async () => ({ hyc: 'missing' as const, skills: 'ok' as const }),
+      install: async () => ({ ok: false, failures: ['hyc'] }),
+      log,
+    });
+    const warn = calls.filter(([m]) => m === 'warn').map(([, a]) => a[0]);
+    expect(warn.some((w) => (w ?? '').includes('前置安装失败(hyc)') && (w ?? '').includes('npm i -g @hytime/hyc'))).toBe(true);
+  });
+
+  it('check 抛错 → log 收到「前置自检失败」，runSelfHeal 不抛出', async () => {
+    const { calls, log } = captureLog();
+    const install = vi.fn(okInstall);
+    await expect(
+      runSelfHeal({
+        check: async () => {
+          throw new Error('check exploded');
+        },
+        install,
+        log,
+      }),
+    ).resolves.toBeUndefined();
+    expect(install).not.toHaveBeenCalled();
+    expect(calls.some(([m, a]) => m === 'warn' && (a[0] ?? '').includes('前置自检失败'))).toBe(true);
+  });
+});
+
+describe('installGuidance', () => {
+  it('仅 hyc → 提示 hyc 命令', () => {
+    expect(installGuidance(['hyc'])).toBe('npm i -g @hytime/hyc');
+  });
+
+  it('仅 skills → 提示技能安装命令', () => {
+    expect(installGuidance(['skills'])).toBe('npm i -g @hytime/hy-companion-skills && hy-companion-install');
+  });
+
+  it('两者都含 → 合并两条命令', () => {
+    const g = installGuidance(['hyc', 'skills']);
+    expect(g).toContain('npm i -g @hytime/hyc');
+    expect(g).toContain('npm i -g @hytime/hy-companion-skills && hy-companion-install');
+    expect(g).toContain(' 或 ');
   });
 });

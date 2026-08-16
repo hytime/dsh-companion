@@ -88,7 +88,7 @@ dsh plugin add @hytime/dsh-companion
 - **hyc CLI 缺失** → 自动执行 `npm i -g @hytime/hyc`
 - **技能缺失** → 自动执行 `npm i -g @hytime/hy-companion-skills`，成功后继续执行 `hy-companion-install`
 
-自愈动作在后台异步执行、不阻塞插件加载。若任一前置安装失败，DSH 日志会打印手动指引，请按日志提示运行 `hy-companion-check` 或 `npm i -g @hytime/hyc` 补装。
+安装采用 `spawnSync` 同步子进程执行，过程不阻塞插件加载（整体 fire-and-forget），但安装期间主事件循环会短暂停顿、其他并发任务暂停。若任一前置安装失败，DSH 日志会打印按缺失项分类的手动指引：仅技能缺失提示 `npm i -g @hytime/hy-companion-skills && hy-companion-install`，仅 hyc 缺失提示 `npm i -g @hytime/hyc`，两者都缺则两条并列；同时在日志顶部仍给出 `hy-companion-check` 兜底路径。
 
 > 说明：插件自愈只是兜底。仍建议按上方 1 → 2 → 3 手动按序安装，以便尽早暴露依赖问题、避免插件首次加载时后台装包带来的额外等待。
 
