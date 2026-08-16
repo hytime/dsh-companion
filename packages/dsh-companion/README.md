@@ -1,6 +1,8 @@
-# @travel-note/dsh-companion
+# @your-scope/dsh-companion
 
-DSH Companion 鲸鱼 Skill/CLI 插件前端：默认显示右下角鲸鱼（二次元娘）悬浮按钮，用户继续使用 DSH 当前对话框输入；DSH Skill 调用 Go 仓库的 Travel Note Skill CLI，本插件接收 Host 投影的 CLI 状态并把鲸鱼回复反馈到当前 DSH 对话。
+DSH Companion 鲸鱼 Skill/CLI 前端插件（dual-face Cordis 插件），发布到 npm 公共 registry。
+
+默认在 DSH 右下角显示鲸鱼（二次元娘）悬浮按钮，用户继续使用 DSH 当前对话框输入；DSH Skill 调用 hyc CLI，本插件接收 Host 投影的 CLI 状态并把鲸鱼回复反馈到当前 DSH 对话。
 
 ## 数据流
 
@@ -22,40 +24,57 @@ DSH 当前对话框 ──用户输入──▶ Skill 触发
                                          + 表情帧切换）
 ```
 
-本前端 app **不负责** Token、CLI 执行和最终对话消息持久化；不创建第二个聊天输入框，不维护独立 SSE 会话。
+本插件**不负责** Token、CLI 执行和最终对话消息持久化；不创建第二个聊天输入框，不维护独立 SSE 会话。
 
 ## 安装前置条件（必须按序满足）
 
-安装/激活前端 DSH 插件前，必须先满足：
+安装/激活本插件前，必须先满足：
 
 1. **hyc CLI 可用**：`command -v hyc` 命中（系统入口 `~/.local/bin/hyc`）。
-2. **DSH 技能已安装**：`$DSH_HOME/skills/` 下存在 `hy-companion` 与 `hy-companion-*`
-   （在 `travel-note-go` 仓库执行 `bash build/skill/install-dsh.sh`）。
+2. **DSH 技能已安装**：`$DSH_HOME/skills/` 下存在 `hy-companion` 与 `hy-companion-*`（先安装 CLI，再执行技能安装器写入 `$DSH_HOME/skills`）。
 
-任一缺失时按顺序先补齐（先 CLI、再技能、再插件），不得跳步。顺序与验证见
-`travel-note-go/docs/hy-companion-dsh-install.md`。
+任一缺失时按顺序先补齐（先 CLI、再技能、再插件），不得跳步。完整顺序与验证命令见根 README「安装前置依赖」一节。
 
-### 安装方式与 `private: true`
+## 安装
 
-本包通过 **tarball / 本地路径**安装，不发布到 npm registry：
+### 发布后
+
+本插件发布到 npm 公共 registry，直接添加：
 
 ```bash
-dsh plugin add ./apps/dsh-companion            # 本地路径安装
-# 或先 pnpm pack 再安装 tarball：
-pnpm --filter @travel-note/dsh-companion pack
-dsh plugin add ./travel-note-dsh-companion-*.tgz
+dsh plugin add @your-scope/dsh-companion
 ```
 
-因此 `package.json` 保留 `"private": true`——它仅禁止 `npm publish`，不影响 `dsh plugin add`
-对本地路径 / tarball 的安装。
+### 本地开发（tarball）
 
-## 开发
+本地开发使用 tarball 安装，避免 `link:` 目录安装带来的双实例 / 产物目录变化 / 可复现性差问题：
 
 ```bash
-pnpm --filter @travel-note/dsh-companion test -- --run
-pnpm --filter @travel-note/dsh-companion typecheck
-pnpm --filter @travel-note/dsh-companion lint
-pnpm --filter @travel-note/dsh-companion build      # library build → lib/
+# 1) 构建插件产物（生成 lib/ 与鲸鱼帧资源）
+pnpm --filter @your-scope/dsh-companion run build
+#    或监听模式：
+pnpm --filter @your-scope/dsh-companion run watch
+
+# 2) 打成 tarball
+pnpm --filter @your-scope/dsh-companion run pack
+#    产物：packages/dsh-companion/your-scope-dsh-companion-0.1.0.tgz
+
+# 3) 装进 DSH（把 *.tgz 替换为实际文件名）
+dsh plugin add ./packages/dsh-companion/your-scope-dsh-companion-0.1.0.tgz
+
+# 4) 重启 DSH 使插件生效
+```
+
+> 占位 scope 为 `@your-scope`。发布前先运行根目录的 `node scripts/rename-package.mjs <你的npm用户名>` 换成真实 npm 用户名，再全局替换命令中的 `@your-scope`。
+
+## 开发命令
+
+```bash
+pnpm --filter @your-scope/dsh-companion run typecheck
+pnpm --filter @your-scope/dsh-companion run lint
+pnpm --filter @your-scope/dsh-companion run test
+pnpm --filter @your-scope/dsh-companion run build      # library build → lib/
+pnpm --filter @your-scope/dsh-companion run pack
 ```
 
 ## 公开 API
@@ -74,7 +93,7 @@ pnpm --filter @travel-note/dsh-companion build      # library build → lib/
 ## 表情与 Phaser 对齐
 
 `CompanionEmotion`（idle/thinking/talking/happy/shy/surprised）、`CharacterActivity`
-（idle/listening/thinking/speaking）与 `apps/web` 的 Phaser 角色状态机
+（idle/listening/thinking/speaking）与既有 Companion 的 Phaser 角色状态机
 （`COMPANION_EMOTIONS`、`CHARACTER_EMOTION_MAP`、`EXPRESSION_TO_FRAME`）逐项一致；
 鲸鱼娘形象帧位于 `public/deepseek-girl-phaser/`（atlas + `frames/*.png`），
 build 时由 `scripts/copy-assets.mjs` 拷贝到 `lib/deepseek-girl-phaser/`（host 半

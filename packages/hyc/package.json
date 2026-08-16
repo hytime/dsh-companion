@@ -1,7 +1,6 @@
 {
   "name": "@your-scope/hyc",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "hy-companion CLI（hyc）— 平台二进制分包分发",
   "bin": { "hyc": "bin/hyc.mjs" },

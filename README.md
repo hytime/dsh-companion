@@ -142,13 +142,17 @@ pnpm -r publish
 - [ ] **占位 scope 已替换**：`rename-package.mjs` 执行后确认 `@your-scope` 不再出现（含 `cordis.patch.yml`、`remote-descriptors.ts`、`hyc/bin/hyc.mjs` 的平台包映射）。
 - [ ] **平台包二进制已构建**：`hyc-darwin-arm64/bin/hyc` 存在（见下「CLI 二进制构建」）。
 
-### private 字段说明
+### 可发布状态说明
 
-当前 `hy-companion-skills`、`hyc`、`hyc-darwin-arm64` 的 `package.json` 带有 `"private": true`。`pnpm pack` 对 private 包也能正常产出 tarball（本次全量验证已确认）。
+`hy-companion-skills`、`hyc`、`hyc-darwin-arm64`（含 `dsh-companion`）四个子包均已在 `package.json` 声明 `"publishConfig": { "access": "public" }` 与 `"license": "MIT"`，**全部可直接发布**，无需改动任何字段。
 
-- 若要 `pnpm -r publish` 这些包，**发布前**需把其 `private` 字段改为 `false`（或在 `publishConfig` 明确声明）。
-- 不要为本地 `pack` 改动该字段；`pack` 不受影响。
-- 也可改用 `pnpm --filter @your-scope/hyc run publish` 这类逐包发布，但仍需先去掉 `private`。
+发布前只需三步：
+
+1. 运行 `node scripts/rename-package.mjs <你的npm用户名>` 把占位 scope `@your-scope` 换成真实用户名；
+2. `npm login`；
+3. `pnpm -r publish`。
+
+无 `private` 字段的包 `pack` / `publish` 均不受影响，`pnpm -r publish` 会按依赖拓扑发布全部子包。
 
 ---
 

@@ -1,7 +1,6 @@
 {
   "name": "@your-scope/hy-companion-skills",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "hy-companion DSH 技能（11 个），安装到 $DSH_HOME/skills",
   "bin": { "hy-companion-install": "bin/hy-companion-install.mjs" },

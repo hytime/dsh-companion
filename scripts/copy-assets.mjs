@@ -1,5 +1,5 @@
 // scripts/copy-assets.mjs
-// 把 apps/dsh-companion 的静态资源（鲸鱼娘表情帧）拷贝到库输出目录。
+// 把 packages/dsh-companion 的静态资源（鲸鱼娘表情帧）拷贝到库输出目录。
 //
 // host 半走两段式编译：tsc 先把 src/*.ts 编译到 lib/types/*，tsdown 再打包
 // lib/types/* 产出 lib/index.js（ESM）。`defaultAssetRoot()` 用 `import.meta.url`
