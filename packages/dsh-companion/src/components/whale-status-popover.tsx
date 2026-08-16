@@ -62,14 +62,18 @@ export const WhaleStatusPopover = React.forwardRef<HTMLDivElement, WhaleStatusPo
     },
     ref,
   ) {
-  const affectionRows: Array<{ label: string; value: number }> = affection
-    ? [
-        { label: '好感度', value: affection.affectionScore },
-        { label: '亲密度', value: affection.intimacyScore },
-        { label: '信任感', value: affection.trustScore },
-        { label: '活跃度', value: affection.engagementScore },
-      ]
-    : [];
+  // showAffection=false 时 host 把 9 个好感度字段全部置 0，这里与悬浮条
+  // （whale-floating-widget 的 affectionScore > 0 meter 隐藏逻辑）保持一致：
+  // affection 缺省或 affectionScore <= 0 时不渲染好感度区块（含 4 行指标）。
+  const affectionRows: Array<{ label: string; value: number }> =
+    affection !== undefined && affection.affectionScore > 0
+      ? [
+          { label: '好感度', value: affection.affectionScore },
+          { label: '亲密度', value: affection.intimacyScore },
+          { label: '信任感', value: affection.trustScore },
+          { label: '活跃度', value: affection.engagementScore },
+        ]
+      : [];
   const affectionMeta = affection
     ? [
         affection.talkativenessFactor > 0 ? `话痨 ${affection.talkativenessFactor.toFixed(1)}` : '',

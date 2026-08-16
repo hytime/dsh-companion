@@ -13,6 +13,7 @@ import { WhaleFloatingWidget } from '../components/whale-floating-widget';
 import type { AffectionStats, CompanionEmotion, SkillStatus } from '../contracts/skill-contract';
 import { EVENTS_URL } from '../contracts/remote-descriptors';
 import { normalizeSkillStatusUpdate } from '../state/skill-status-source';
+import { fetchBuddyIfRemindersEnabled } from './buddy-gate';
 import type { CompanionRemoteFace } from './companion-types';
 import { travelNoteCompanionRemote } from './remote-contract';
 import { SettingsCard } from './settings-card';
@@ -188,12 +189,10 @@ export async function apply(ctx: PluginCtx) {
                 if (result.ok) applyStatus(result.value);
               })
               .catch(() => {});
-            remote.travelNoteCompanion
-              .buddy()
-              .then((result) => {
-                if (result.ok) applyBuddy(result.value);
-              })
-              .catch(() => {});
+            // 兜底轮询的 buddy 通道受 reminderEnabled 守卫（与 host 30s 轮询/SSE
+            // 初次推送一致）：先读配置，关闭提醒时不采集也不 setBuddy；配置读取
+            // 失败回退为照常推送（fail-open）。函数内部已吞掉 buddy 采集异常。
+            void fetchBuddyIfRemindersEnabled(remote.travelNoteCompanion, applyBuddy);
             remote.travelNoteCompanion
               .latestReply()
               .then((result) => {

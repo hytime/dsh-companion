@@ -11,8 +11,9 @@
  *
  * 配置消费：apply 启动时 readSettings 注入 CompanionRemote；buddy() 用配置覆盖
  * 线上人格的名称/称呼（空值回退线上）、showAffection=false 时抑制好感度字段；
- * latestReply()/回复轮询在 showBubble=false 时置空；buddy 30s 轮询在
- * reminderEnabled=false 时跳过；setConfig 成功后 host 重读配置并推送新状态。
+ * latestReply()/回复轮询在 showBubble=false 时置空；buddy 30s 轮询与 SSE 连接
+ * 建立时的初次推送在 reminderEnabled=false 时跳过（scheduleInitialPushes）；
+ * setConfig 成功后 host 重读配置并推送新状态（不走通道守卫，保证即时生效）。
  *
  * Remote 走 SRC 弱解析路径：`CompanionRemote extends TypertRemoteService` 用
  * `@Remote` 标记公开方法，Gateway 经 `remoteMethods(service)` + `typertRemote`
@@ -169,6 +170,22 @@ export function applySettingsToBuddy(base: BuddyBase, settings: CompanionSetting
 /** 周期推送通道开关：reminderEnabled=false 跳过 buddy 轮询；showBubble=false 跳过回复轮询。 */
 export function selectPushChannels(settings: CompanionSettings): { buddy: boolean; reply: boolean } {
   return { buddy: settings.reminderEnabled, reply: settings.showBubble };
+}
+
+/**
+ * SSE 连接建立时的初次推送调度（页面加载的状态快照）。
+ * buddy 通道套用与 30s 轮询一致的 reminderEnabled 守卫；回复推送由 pushReply
+ * 内部的 showBubble 守卫承担，故这里照常调度。注意：守卫只作用于本调度点，
+ * setConfig 成功后的主动推送（onConfigApplied → pushBuddy）不经过本函数，
+ * 保证配置变更即时生效。
+ */
+export function scheduleInitialPushes(
+  settings: CompanionSettings,
+  pushBuddy: () => void,
+  pushReply: () => void,
+): void {
+  if (selectPushChannels(settings).buddy) pushBuddy();
+  pushReply();
 }
 
 /** CompanionRemote 缺省依赖：真实 store + 真实命令（测试注入替身）。 */
@@ -616,8 +633,9 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
           const client: SseClient = { res: { write: (chunk: string) => res.write!(chunk) } };
           sseClients.add(client);
           // 连接建立后立即推送 buddy 与最近回复（异步采集完成后广播）。
-          void pushBuddy();
-          void pushReply();
+          // buddy 通道受 reminderEnabled 守卫（与 30s 轮询一致，见 scheduleInitialPushes）；
+          // setConfig 成功后的主动推送不走此处，保证配置变更即时生效。
+          scheduleInitialPushes(remote.getSettings(), () => void pushBuddy(), () => void pushReply());
           // 心跳：每 15s 发 SSE 注释帧（EventSource 忽略注释），防止代理/服务器
           // 因空闲关闭连接导致断连。
           const heartbeat = setInterval(() => {

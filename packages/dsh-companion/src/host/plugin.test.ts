@@ -8,7 +8,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { Context } from '@deepseek-ai/cordis';
-import { applySettingsToBuddy, CompanionRemote, selectPushChannels } from './plugin';
+import { applySettingsToBuddy, CompanionRemote, scheduleInitialPushes, selectPushChannels } from './plugin';
 import { DEFAULT_SETTINGS, type CompanionSettings } from './settings-store';
 import type { SettingsRpcDeps } from './settings-rpc';
 
@@ -146,6 +146,43 @@ describe('selectPushChannels(周期推送通道开关)', () => {
 
   it('缺省配置两个通道都开启', () => {
     expect(selectPushChannels({ ...DEFAULT_SETTINGS })).toEqual({ buddy: true, reply: true });
+  });
+});
+
+describe('scheduleInitialPushes(SSE 连接建立时的初次推送)', () => {
+  it('reminderEnabled=false:跳过 buddy 初次推送,回复推送照常(页面加载不弹提醒 toast)', () => {
+    const pushBuddy = vi.fn();
+    const pushReply = vi.fn();
+    scheduleInitialPushes({ ...DEFAULT_SETTINGS, reminderEnabled: false }, pushBuddy, pushReply);
+    expect(pushBuddy).not.toHaveBeenCalled();
+    expect(pushReply).toHaveBeenCalledTimes(1);
+  });
+
+  it('缺省配置:buddy 与回复都推送(SSE 快照完整)', () => {
+    const pushBuddy = vi.fn();
+    const pushReply = vi.fn();
+    scheduleInitialPushes({ ...DEFAULT_SETTINGS }, pushBuddy, pushReply);
+    expect(pushBuddy).toHaveBeenCalledTimes(1);
+    expect(pushReply).toHaveBeenCalledTimes(1);
+  });
+
+  it('守卫只作用于初次推送调度:reminderEnabled=false 时 setConfig 成功后的主动推送不被抑制', async () => {
+    // 复现 apply 的接线:onConfigApplied → pushBuddy 直接调用(不经 scheduleInitialPushes)
+    const deps = makeFakeDeps();
+    const remote = makeRemote({ deps });
+    remote.applySettings({ ...DEFAULT_SETTINGS, reminderEnabled: false });
+    const pushBuddy = vi.fn();
+    const pushReply = vi.fn();
+    remote.setOnConfigApplied(() => {
+      // 与 apply 中 onConfigApplied 回调等价:重读配置后无条件 pushBuddy(规格要求即时生效)
+      void pushBuddy();
+    });
+    // 初次推送被守卫跳过
+    scheduleInitialPushes(remote.getSettings(), () => void pushBuddy(), pushReply);
+    expect(pushBuddy).not.toHaveBeenCalled();
+    // 但 setConfig 成功仍触发主动推送
+    await remote.setConfig({ companionName: '小鲸' });
+    expect(pushBuddy).toHaveBeenCalledTimes(1);
   });
 });
 
