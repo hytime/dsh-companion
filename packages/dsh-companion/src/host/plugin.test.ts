@@ -125,11 +125,43 @@ function makeApplyCtx(deps?: SettingsRpcDeps): Context {
       return typeof disposer === 'function' ? disposer : () => {};
     },
     on: vi.fn(),
+    emit: vi.fn(),
     plugin: vi.fn(() => ({})),
   } as unknown as Context;
   const remote = new CompanionRemote(ctx, deps ?? makeFakeDeps());
   return ctx;
 }
+
+function makeAsyncApplyCtx(deps?: SettingsRpcDeps): Context {
+  let remote: CompanionRemote | undefined;
+  const ctx = {
+    reflect: { provide: vi.fn() },
+    get: (name: string): unknown => (name === REMOTE_SERVICE ? remote : undefined),
+    effect: (callback: () => void | (() => void)): (() => void) => {
+      const disposer = callback();
+      return typeof disposer === 'function' ? disposer : () => {};
+    },
+    on: vi.fn(),
+    emit: vi.fn(),
+    plugin: vi.fn(async () => {
+      await Promise.resolve();
+      remote = new CompanionRemote(ctx, deps ?? makeFakeDeps());
+    }),
+  } as unknown as Context;
+  return ctx;
+}
+
+describe('apply(异步挂载 CompanionRemote 后再读取服务)', () => {
+  it('waits for ctx.plugin before accessing the remote service', async () => {
+    vi.mocked(readSettings).mockResolvedValue({ ...DEFAULT_SETTINGS });
+
+    await expect((async () => {
+      await apply(makeAsyncApplyCtx());
+    })()).resolves.toBeUndefined();
+
+    vi.mocked(readSettings).mockReset();
+  });
+});
 
 describe('applySettingsToBuddy(名称/称呼/好感度开关消费)', () => {
   it('配置非空的 companionName/userCallName 优先于线上值', () => {
@@ -383,7 +415,7 @@ describe('apply(启动路径:初始 readSettings 完成后 restart 重建定时�
     });
     vi.mocked(readSettings).mockImplementation(() => readPromise);
 
-    apply(makeApplyCtx());
+    await apply(makeApplyCtx());
 
     // 读回完成前:只按缺省快照建 buddy 定时器(60s)与回复定时器(5s),
     // 尚无 restart(旧实现此处就漏掉了持久化间隔)
