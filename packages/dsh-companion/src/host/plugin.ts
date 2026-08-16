@@ -515,6 +515,9 @@ export async function apply(ctx: Context, options: TravelNoteCompanionHostOption
   // 但 gateway 的 collectSrcClaims 只遍历 fiber-owned service，否则端点 404。
   await ctx.plugin(CompanionRemote);
   const remote = ctx.get(REMOTE_SERVICE) as CompanionRemote;
+  // 诊断(临时):确认 SRC Remote 注册对 gateway 可见的条件
+  console.log('[dsh-companion] diag: props =', Object.keys(ctx.reflect.props).filter((k) => k.includes('travel') || k.includes('companion')).join(','));
+  console.log('[dsh-companion] diag: get(travelNoteCompanion) =', remote !== undefined);
   // 主动通知 gateway 重置 SRC claims 缓存：Service 在 fiber LOADING 阶段注册，
   // 不会触发 Cordis 的 internal/service 通知（notify 仅在 ACTIVE 时执行）；若 gateway
   // 的 srcClaims 已在本插件加载前（web UI 初始化 remote 调用）缓存空集，端点将 404。
