@@ -61,8 +61,8 @@ function deepMerge(base: Record<string, unknown>, override: Record<string, unkno
   return merged;
 }
 
-/** 只取 CompanionSettings 的 6 个已知字段(凭据等未知字段一律不落盘)。 */
-function pickKnownFields(partial: Partial<CompanionSettings>): Record<string, unknown> {
+/** 只取 CompanionSettings 的 6 个已知字段(凭据等未知字段一律不落盘、不返回)。 */
+function pickKnownFields(partial: Record<string, unknown>): Record<string, unknown> {
   const picked: Record<string, unknown> = {};
   for (const key of Object.keys(DEFAULT_SETTINGS) as Array<keyof CompanionSettings>) {
     if (partial[key] !== undefined) picked[key] = partial[key];
@@ -72,7 +72,8 @@ function pickKnownFields(partial: Partial<CompanionSettings>): Record<string, un
 
 /**
  * 读取配置:文件不存在 / 非法 JSON / 读取失败一律返回缺省,不抛出。
- * 已存在文件按「缺省为底、文件覆盖」深合并,缺失字段回落到缺省。
+ * 已存在文件按「缺省为底、文件覆盖」深合并,缺失字段回落到缺省;
+ * 合并结果再过一次白名单,保证返回值恒为 6 个已知字段(磁盘手改/旧版本写入的未知字段不泄漏)。
  */
 export async function readSettings(options: ReadSettingsOptions = {}): Promise<CompanionSettings> {
   const configPath = options.configPath ?? defaultConfigPath();
@@ -80,7 +81,8 @@ export async function readSettings(options: ReadSettingsOptions = {}): Promise<C
     const raw = await readFile(configPath, 'utf8');
     const parsed: unknown = JSON.parse(raw);
     if (!isPlainObject(parsed)) return { ...DEFAULT_SETTINGS };
-    return deepMerge({ ...DEFAULT_SETTINGS }, parsed) as unknown as CompanionSettings;
+    const merged = pickKnownFields(deepMerge({ ...DEFAULT_SETTINGS }, parsed));
+    return merged as unknown as CompanionSettings;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

@@ -41,6 +41,15 @@ describe('readSettings', () => {
     await writeFile(configPath, '{ 这不是合法 JSON', 'utf8');
     await expect(readSettings({ configPath })).resolves.toEqual(DEFAULT_SETTINGS);
   });
+
+  it('文件含未知字段 → 返回值仅含 6 个已知字段(未知字段不泄漏)', async () => {
+    await mkdir(join(dir, '.hy-companion'), { recursive: true });
+    await writeFile(configPath, JSON.stringify({ companionName: '小鲸', token: 'secret' }), 'utf8');
+    await expect(readSettings({ configPath })).resolves.toEqual({
+      ...DEFAULT_SETTINGS,
+      companionName: '小鲸',
+    });
+  });
 });
 
 describe('writeSettings', () => {
@@ -79,6 +88,17 @@ describe('writeSettings', () => {
     expect(result).toEqual({ ok: true });
     const raw = JSON.parse(await readFile(configPath, 'utf8')) as Record<string, unknown>;
     expect(Object.keys(raw).sort()).toEqual(Object.keys(DEFAULT_SETTINGS).sort());
+  });
+
+  it('文件预置未知字段 → 写入后落盘键集合仍恰好为 6 个已知字段', async () => {
+    await mkdir(join(dir, '.hy-companion'), { recursive: true });
+    await writeFile(configPath, JSON.stringify({ evil: 'x', token: 'secret' }), 'utf8');
+    const result = await writeSettings({ companionName: '小鲸' }, { configPath });
+    expect(result).toEqual({ ok: true });
+    const raw = JSON.parse(await readFile(configPath, 'utf8')) as Record<string, unknown>;
+    expect(Object.keys(raw).sort()).toEqual(
+      ['companionName', 'userCallName', 'showAffection', 'showBubble', 'reminderEnabled', 'reminderIntervalMin'].sort(),
+    );
   });
 
   it('写入失败(注入 writeFile 抛错)→ 返回 { ok:false, error } 不抛出', async () => {
