@@ -20,7 +20,7 @@ export function parseArgs(argv) {
 export async function installSkills({ sourceDir, targetDir, force }) {
   const probe = spawnSync('hyc', ['--help'], { stdio: 'ignore' });
   const hycMissing = Boolean(probe.error && probe.error.code === 'ENOENT');
-  if (hycMissing) console.warn('[hy-companion-install] 警告：PATH 中未检测到 hyc，请先安装 CLI（npm i -g @your-scope/hyc）');
+  if (hycMissing) console.warn('[hy-companion-install] 警告：PATH 中未检测到 hyc，请先安装 CLI（npm i -g @hytime/hyc）');
   await mkdir(targetDir, { recursive: true });
   const entries = await readdir(sourceDir, { withFileTypes: true });
   const installed = []; const skipped = [];

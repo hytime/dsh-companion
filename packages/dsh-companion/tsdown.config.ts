@@ -4,7 +4,7 @@ import { basename, resolve as resolvePath, dirname } from 'node:path'
 import { defineConfig } from 'tsdown'
 import { transform } from 'lightningcss'
 
-const ID = '@your-scope/dsh-companion'
+const ID = '@hytime/dsh-companion'
 
 // CSS Modules：把 .module.css 编译成 hash 类名 + <style data-plugin> 注入
 const cssModulePlugin = {

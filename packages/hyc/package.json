@@ -1,5 +1,5 @@
 {
-  "name": "@your-scope/hyc",
+  "name": "@hytime/hyc",
   "version": "0.1.0",
   "type": "module",
   "description": "hy-companion CLI（hyc）— 平台二进制分包分发",
@@ -7,6 +7,6 @@
   "files": ["bin/", "README.md"],
   "license": "MIT",
   "publishConfig": { "access": "public" },
-  "optionalDependencies": { "@your-scope/hyc-darwin-arm64": "0.1.0" },
+  "optionalDependencies": { "@hytime/hyc-darwin-arm64": "0.1.0" },
   "scripts": { "test": "vitest run --config ../../vitest.packages.config.ts", "pack": "pnpm pack" }
 }

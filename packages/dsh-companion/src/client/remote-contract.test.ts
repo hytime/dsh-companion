@@ -3,7 +3,7 @@ import { travelNoteCompanionRemote } from './remote-contract';
 
 describe('travelNoteCompanionRemote', () => {
   it('declares strict direct buddy and asset endpoints', () => {
-    expect(travelNoteCompanionRemote.package).toBe('@your-scope/dsh-companion');
+    expect(travelNoteCompanionRemote.package).toBe('@hytime/dsh-companion');
     expect(travelNoteCompanionRemote.descriptors.map((descriptor) => `${descriptor.namespace}/${descriptor.method}`)).toEqual([
       'travelNoteCompanion/buddy',
       'travelNoteCompanion/asset',

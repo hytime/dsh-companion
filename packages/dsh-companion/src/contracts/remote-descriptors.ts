@@ -6,7 +6,7 @@
  * 各自组装，避免两处漂移。
  */
 
-export const REMOTE_PACKAGE = '@your-scope/dsh-companion';
+export const REMOTE_PACKAGE = '@hytime/dsh-companion';
 export const REMOTE_SERVICE = 'travelNoteCompanion';
 export const REMOTE_NAMESPACE = 'travelNoteCompanion';
 

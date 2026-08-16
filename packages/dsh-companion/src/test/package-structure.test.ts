@@ -25,6 +25,6 @@ describe('dsh 发布配置', () => {
     expect(peer['@deepseek-ai/dsh-client-ui-primitives']).toBeTruthy();
   });
   it('cordis.patch.yml 插入的 name 等于包名', () => {
-    expect(patch).toContain('@your-scope/dsh-companion');
+    expect(patch).toContain('@hytime/dsh-companion');
   });
 });

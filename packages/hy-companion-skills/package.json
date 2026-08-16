@@ -1,5 +1,5 @@
 {
-  "name": "@your-scope/hy-companion-skills",
+  "name": "@hytime/hy-companion-skills",
   "version": "0.1.0",
   "type": "module",
   "description": "hy-companion DSH 技能（11 个），安装到 $DSH_HOME/skills",
