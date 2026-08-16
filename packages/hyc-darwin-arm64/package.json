@@ -1,0 +1,11 @@
+{
+  "name": "@your-scope/hyc-darwin-arm64",
+  "version": "0.1.0",
+  "private": true,
+  "description": "hyc darwin-arm64 二进制",
+  "os": ["darwin"],
+  "cpu": ["arm64"],
+  "files": ["bin/"],
+  "license": "MIT",
+  "publishConfig": { "access": "public" }
+}
