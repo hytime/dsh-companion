@@ -72,7 +72,11 @@ importers:
 
   packages/hy-companion-skills: {}
 
-  packages/hyc: {}
+  packages/hyc:
+    optionalDependencies:
+      '@hytime/hyc-darwin-arm64':
+        specifier: 0.1.0
+        version: link:../hyc-darwin-arm64
 
   packages/hyc-darwin-arm64: {}
 
@@ -674,6 +678,7 @@ packages:
   '@testing-library/jest-dom@6.10.0':
     resolution: {integrity: sha512-HQwu0KaB2zyT0iLzBL+8CLyZDL3KlZlZJ+2iyc9uCUnlJVskJU/UlPuVCyIPhtukjPQdT2QNoR5nCP5FqTmmDQ==}
     engines: {node: '>=22', npm: '>=6', yarn: '>=1'}
+    deprecated: Incorrect minor release with breaking changes (Node >=22 and required @testing-library/dom peer). Use 6.9.1 for the 6.x line, or upgrade to 7.0.0.
     peerDependencies:
       '@testing-library/dom': '>=10 <11'
 
