@@ -1,4 +1,4 @@
-# @your-scope/dsh-companion
+# @hytime/dsh-companion
 
 DSH Companion 鲸鱼 Skill/CLI 前端插件（dual-face Cordis 插件），发布到 npm 公共 registry。
 
@@ -42,7 +42,7 @@ DSH 当前对话框 ──用户输入──▶ Skill 触发
 本插件发布到 npm 公共 registry，直接添加：
 
 ```bash
-dsh plugin add @your-scope/dsh-companion
+dsh plugin add @hytime/dsh-companion
 ```
 
 ### 本地开发（tarball）
@@ -51,30 +51,30 @@ dsh plugin add @your-scope/dsh-companion
 
 ```bash
 # 1) 构建插件产物（生成 lib/ 与鲸鱼帧资源）
-pnpm --filter @your-scope/dsh-companion run build
+pnpm --filter @hytime/dsh-companion run build
 #    或监听模式：
-pnpm --filter @your-scope/dsh-companion run watch
+pnpm --filter @hytime/dsh-companion run watch
 
 # 2) 打成 tarball
-pnpm --filter @your-scope/dsh-companion run pack
-#    产物：packages/dsh-companion/your-scope-dsh-companion-0.1.0.tgz
+pnpm --filter @hytime/dsh-companion run pack
+#    产物：packages/dsh-companion/hytime-dsh-companion-0.1.0.tgz
 
 # 3) 装进 DSH（把 *.tgz 替换为实际文件名）
-dsh plugin add ./packages/dsh-companion/your-scope-dsh-companion-0.1.0.tgz
+dsh plugin add ./packages/dsh-companion/hytime-dsh-companion-0.1.0.tgz
 
 # 4) 重启 DSH 使插件生效
 ```
 
-> 占位 scope 为 `@your-scope`。发布前先运行根目录的 `node scripts/rename-package.mjs <你的npm用户名>` 换成真实 npm 用户名，再全局替换命令中的 `@your-scope`。
+> 发布包名为 `@hytime/dsh-companion`（scope 已定型，无需再作替换）。仅当整体更换 scope 时，才运行根目录的 `node scripts/rename-package.mjs <新scope>` 全局替换。
 
 ## 开发命令
 
 ```bash
-pnpm --filter @your-scope/dsh-companion run typecheck
-pnpm --filter @your-scope/dsh-companion run lint
-pnpm --filter @your-scope/dsh-companion run test
-pnpm --filter @your-scope/dsh-companion run build      # library build → lib/
-pnpm --filter @your-scope/dsh-companion run pack
+pnpm --filter @hytime/dsh-companion run typecheck
+pnpm --filter @hytime/dsh-companion run lint
+pnpm --filter @hytime/dsh-companion run test
+pnpm --filter @hytime/dsh-companion run build      # library build → lib/
+pnpm --filter @hytime/dsh-companion run pack
 ```
 
 ## 公开 API

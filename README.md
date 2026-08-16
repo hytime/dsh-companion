@@ -2,13 +2,13 @@
 
 本仓库是「hy-companion 陪伴系统」的独立发布仓库，把三个可发布单元放在一个 pnpm workspace 里统一构建、验证与发布：
 
-| 包名（占位 scope） | 说明 | 安装方式 |
+| 包名 | 说明 | 安装方式 |
 | --- | --- | --- |
-| `@your-scope/hyc` | hy-companion CLI（二进制分包分发，当前提供 darwin-arm64） | `npm i -g @your-scope/hyc` |
-| `@your-scope/hy-companion-skills` | hy-companion DSH 技能（11 个），安装到 `$DSH_HOME/skills` | `npm i -g @your-scope/hy-companion-skills && hy-companion-install` |
-| `@your-scope/dsh-companion` | DSH Companion 鲸鱼 Skill/CLI 前端（dual-face Cordis 插件） | `dsh plugin add @your-scope/dsh-companion` |
+| `@hytime/hyc` | hy-companion CLI（二进制分包分发，当前提供 darwin-arm64） | `npm i -g @hytime/hyc` |
+| `@hytime/hy-companion-skills` | hy-companion DSH 技能（11 个），安装到 `$DSH_HOME/skills` | `npm i -g @hytime/hy-companion-skills && hy-companion-install` |
+| `@hytime/dsh-companion` | DSH Companion 鲸鱼 Skill/CLI 前端（dual-face Cordis 插件） | `dsh plugin add @hytime/dsh-companion` |
 
-> 占位 scope 为 `@your-scope`。发布前先运行 rename 脚本（见下文「发布步骤」）把占位 scope 改成你真实的 npm 用户名，再全局替换命令中的 `@your-scope`。
+> scope 已定型为 `@hytime`，安装 / 发布命令中的 `@hytime/*` 即为最终包名。仅当需要整体更换 scope 时，才运行根目录的 rename 脚本（见下文「发布步骤」）。
 
 三件套共同构成完整的 hy-companion 使用链路：前端鲸鱼悬浮窗（插件）显示并反馈 Skill/CLI 状态；DSH Skill 调用 hyc CLI；hyc 转由 Go 后端产出结构化 `text/emotion/status` 响应。前端插件只接收可序列化的 Skill/CLI 状态，不直接访问 DSH Host/Client Service、credentials 或 live runtime 对象。
 
@@ -21,7 +21,7 @@ dsh-companion/
 ├── package.json              # workspace 根，仅放 devDependencies 与根级测试
 ├── pnpm-workspace.yaml
 ├── scripts/
-│   ├── rename-package.mjs    # 把 @your-scope 替换为真实 scope（发布前）
+│   ├── rename-package.mjs    # 换 scope 时全局替换 @hytime
 │   ├── sync-skills.mjs       # 从 travel-note-go 同步 DSH 技能
 │   ├── build-binaries.mjs    # 交叉编译 hyc 平台二进制
 │   ├── copy-styles.mjs       # 拷贝插件样式
@@ -57,14 +57,14 @@ pnpm install
 
 ```bash
 # 1) 先安装 hyc CLI（提供 PATH 中的 hyc 命令）
-npm i -g @your-scope/hyc
+npm i -g @hytime/hyc
 
 # 2) 再安装 DSH 技能，并执行安装器写入 $DSH_HOME/skills
-npm i -g @your-scope/hy-companion-skills
+npm i -g @hytime/hy-companion-skills
 hy-companion-install
 
 # 3) 最后安装前端 DSH 插件
-dsh plugin add @your-scope/dsh-companion
+dsh plugin add @hytime/dsh-companion
 ```
 
 技能安装器 `hy-companion-install` 会把 `hy-companion` 与 `hy-companion-*`（共 11 个）技能拷贝到 `$DSH_HOME/skills`（默认 `$HOME/.dsh/skills`）。已存在同名技能时默认跳过，加 `--force` 覆盖；可用 `--dsh-home <dir>` 指定 DSH 目录。
@@ -77,7 +77,7 @@ dsh plugin add @your-scope/dsh-companion
 
 1. **先安装 hyc CLI**。校验：`command -v hyc` 应命中（如 `~/.local/bin/hyc` 或 PATH 中任一位置）。
 2. **再安装 DSH 技能**。校验：`$DSH_HOME/skills/`（默认 `$HOME/.dsh/skills/`）下存在 `hy-companion` 与 `hy-companion-*` 目录。
-3. **最后安装前端 DSH 插件**。校验：上面两前置均已满足，然后执行 `dsh plugin add @your-scope/dsh-companion` 并重启 DSH。
+3. **最后安装前端 DSH 插件**。校验：上面两前置均已满足，然后执行 `dsh plugin add @hytime/dsh-companion` 并重启 DSH。
 
 > 完整顺序与验证命令的权威说明见原来的 `travel-note-go/docs/hy-companion-dsh-install.md`。
 
@@ -89,16 +89,16 @@ dsh plugin add @your-scope/dsh-companion
 
 ```bash
 # 1) 构建插件产物（生成 lib/ 与鲸鱼帧资源）
-pnpm --filter @your-scope/dsh-companion run build
+pnpm --filter @hytime/dsh-companion run build
 #    或监听模式：
-pnpm --filter @your-scope/dsh-companion run watch
+pnpm --filter @hytime/dsh-companion run watch
 
 # 2) 打成 tarball
-pnpm --filter @your-scope/dsh-companion run pack
-#    产物：packages/dsh-companion/your-scope-dsh-companion-0.1.0.tgz
+pnpm --filter @hytime/dsh-companion run pack
+#    产物：packages/dsh-companion/hytime-dsh-companion-0.1.0.tgz
 
 # 3) 装进 DSH（把 *.tgz 替换为实际文件名）
-dsh plugin add ./packages/dsh-companion/your-scope-dsh-companion-0.1.0.tgz
+dsh plugin add ./packages/dsh-companion/hytime-dsh-companion-0.1.0.tgz
 
 # 4) 重启 DSH 使插件生效
 ```
@@ -117,20 +117,23 @@ dsh plugin add ./packages/dsh-companion/your-scope-dsh-companion-0.1.0.tgz
 
 ## 发布步骤
 
-前置：先在 npm 上完成账号登录。
+前置：scope 已定型为 `@hytime`，包名无需再改。先在 npm 上完成账号登录。
 
 ```bash
-# 1) 把所有 @your-scope 占位 scope 替换为你真实的 npm 用户名（不传 --root 即以本仓库为根）
-node scripts/rename-package.mjs <你的npm用户名>
-
-# 2) 登录 npm
+# 1) 登录 npm
 npm login
 
-# 3) 发布全部包（按依赖拓扑顺序）
+# 2) 发布全部包（按依赖拓扑顺序）
 pnpm -r publish
 ```
 
 > 三个包 / 平台包均声明了 `"publishConfig": { "access": "public" }` 与 `"license": "MIT"`。
+
+若要整体更换 scope（例如迁移到新组织名），则运行根目录的 rename 脚本把 `@hytime` 全局替换为新 scope，再按上述步骤发布：
+
+```bash
+node scripts/rename-package.mjs <新scope>   # 不传 --root 即以本仓库为根，全局替换 @hytime/* → @<新scope>/*
+```
 
 ### 发布前检查清单
 
@@ -139,18 +142,17 @@ pnpm -r publish
 - [ ] **LICENSE 确认**：本仓库文件、脚本、技能内容的许可符合 `MIT`；`packages/*/package.json` 均声明 `license: MIT`。对外发布前确认为合理。
 - [ ] **`repository` / `author` 补填**：发布前给各 `packages/*/package.json` 补上 `repository`（指向本仓库实际远端地址）与 `author`（维护者名/邮箱），供 npm 元数据使用。
 - [ ] **鲸鱼帧资源版权确认**：`packages/dsh-companion/public/deepseek-girl-phaser/` 下的 `deepseek-girl-atlas.png`、各 `frames/*.png` 表情帧来自既有 Companion 舞台资源，发布前确认其版权与再分发许可后再随包发布。
-- [ ] **占位 scope 已替换**：`rename-package.mjs` 执行后确认 `@your-scope` 不再出现（含 `cordis.patch.yml`、`remote-descriptors.ts`、`hyc/bin/hyc.mjs` 的平台包映射）。
+- [ ] **scope 一致**：发布包名均为 `@hytime/*`（含 `cordis.patch.yml`、`remote-descriptors.ts`、`hyc/bin/hyc.mjs` 的平台包映射）。
 - [ ] **平台包二进制已构建**：`hyc-darwin-arm64/bin/hyc` 存在（见下「CLI 二进制构建」）。
 
 ### 可发布状态说明
 
 `hy-companion-skills`、`hyc`、`hyc-darwin-arm64`（含 `dsh-companion`）四个子包均已在 `package.json` 声明 `"publishConfig": { "access": "public" }` 与 `"license": "MIT"`，**全部可直接发布**，无需改动任何字段。
 
-发布前只需三步：
+scope 已定型为 `@hytime`，发布前只需两步：
 
-1. 运行 `node scripts/rename-package.mjs <你的npm用户名>` 把占位 scope `@your-scope` 换成真实用户名；
-2. `npm login`；
-3. `pnpm -r publish`。
+1. `npm login`；
+2. `pnpm -r publish`。
 
 无 `private` 字段的包 `pack` / `publish` 均不受影响，`pnpm -r publish` 会按依赖拓扑发布全部子包。
 
@@ -210,11 +212,11 @@ pnpm -r run typecheck            # 预期：只有插件包有 typecheck script
 pnpm -r run test                 # 预期：插件 98 + 技能 3 + CLI 1 全绿（根级测试不在此列）
 pnpm exec vitest run --config vitest.packages.config.ts   # 根级 rename/build-binaries + 技能 + CLI
 pnpm -r run build                # 预期：插件 build 通过
-pnpm --filter @your-scope/dsh-companion run pack
-pnpm --filter @your-scope/hy-companion-skills run pack
-pnpm --filter @your-scope/hyc run pack
+pnpm --filter @hytime/dsh-companion run pack
+pnpm --filter @hytime/hy-companion-skills run pack
+pnpm --filter @hytime/hyc run pack
 ls packages/*/*.tgz              # 三个 tarball 分别产出
-tar -tzf packages/dsh-companion/your-scope-dsh-companion-0.1.0.tgz   # 抽查插件：lib/、cordis.patch.yml、lib/deepseek-girl-phaser/
-tar -tzf packages/hy-companion-skills/your-scope-hy-companion-skills-0.1.0.tgz  # 抽查技能：skills/ 11 目录、lib/installer.mjs
-tar -tzf packages/hyc/your-scope-hyc-0.1.0.tgz               # 抽查 CLI：bin/hyc.mjs
+tar -tzf packages/dsh-companion/hytime-dsh-companion-0.1.0.tgz   # 抽查插件：lib/、cordis.patch.yml、lib/deepseek-girl-phaser/
+tar -tzf packages/hy-companion-skills/hytime-hy-companion-skills-0.1.0.tgz  # 抽查技能：skills/ 11 目录、lib/installer.mjs
+tar -tzf packages/hyc/hytime-hyc-0.1.0.tgz               # 抽查 CLI：bin/hyc.mjs
 ```

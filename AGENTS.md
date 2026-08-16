@@ -8,9 +8,9 @@
 
 | 包 | 说明 |
 | --- | --- |
-| `@your-scope/dsh-companion` | 前端插件（dual-face Cordis 插件，鲸鱼悬浮窗，展示 Skill/CLI 状态） |
-| `@your-scope/hy-companion-skills` | DSH 技能包（11 个技能，安装到 `$DSH_HOME/skills`） |
-| `@your-scope/hyc` + `hyc-darwin-arm64` | CLI 入口 + 平台二进制包（当前仅 darwin-arm64） |
+| `@hytime/dsh-companion` | 前端插件（dual-face Cordis 插件，鲸鱼悬浮窗，展示 Skill/CLI 状态） |
+| `@hytime/hy-companion-skills` | DSH 技能包（11 个技能，安装到 `$DSH_HOME/skills`） |
+| `@hytime/hyc` + `hyc-darwin-arm64` | CLI 入口 + 平台二进制包（当前仅 darwin-arm64） |
 
 依赖链：前端插件 ← DSH 技能 ← hyc CLI。前端插件只接收可序列化的 Skill/CLI 状态，不直接访问 DSH Host/Client Service、credentials 或 live runtime 对象。
 
@@ -33,7 +33,7 @@ dsh-companion/
 
 1. **禁用 `link:` 目录安装**：DSH profile 里禁止用目录链接安装插件，统一走「build → pack → 装 tarball → 重启 DSH」循环。原因：双实例（两个 React / Cordis）、构建时 `rm -rf lib` 冲突、绝对路径不可复现。
 2. **安装顺序不可颠倒**：先装 hyc CLI → 再装 DSH 技能 → 最后装前端插件，任一前置缺失先补齐，不得跳步。
-3. **发布前必须 rename**：占位 scope 为 `@your-scope`，发布前运行 `node scripts/rename-package.mjs <npm用户名>` 全局替换。
+3. **scope 已定型 `@hytime`**：包名统一为 `@hytime/*`；仅当需要整体更换 scope 时才运行 `node scripts/rename-package.mjs <新scope>` 全局替换。
 4. **4 个子包均可直接发布**：均已声明 `publishConfig.access: public` 与 `license: MIT`；发布前需补 `repository` / `author`，并确认鲸鱼帧资源版权。
 5. **二进制构建依赖外部仓库**：`sync-skills.mjs` 与 `build-binaries.mjs` 需要 `TRAVEL_NOTE_GO` 指向 `travel-note-go` 仓库，默认 `/Volumes/hydisk/vsProject/travel-note-go`。
 6. **git worktree 管理**：功能开发使用隔离 worktree（`.worktrees/<分支名>`）；同时存在的 worktree 最多 4 个；工作完成合并回主线后必须删除对应 worktree。
@@ -64,7 +64,7 @@ pnpm -r run test                                # 包级测试（插件 98 + 技
 pnpm exec vitest run --config vitest.packages.config.ts   # 根级 + 技能 + CLI 测试
 pnpm -r run build                               # 构建（插件产物）
 pnpm -r run pack                                # 打包全部可发布包
-node scripts/rename-package.mjs <npm用户名>      # 替换占位 scope（发布前）
+node scripts/rename-package.mjs <新scope>      # 换 scope 时全局替换 @hytime→@<新scope>
 TRAVEL_NOTE_GO=<路径> node scripts/sync-skills.mjs       # 从 travel-note-go 同步技能
 TRAVEL_NOTE_GO=<路径> node scripts/build-binaries.mjs    # 交叉编译 hyc 二进制
 ```
