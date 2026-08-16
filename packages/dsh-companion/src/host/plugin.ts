@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
+import { Remote, TypertRemoteService, remoteMethods } from '@deepseek-ai/dsh-typert-protocol';
 import type { Context } from '@deepseek-ai/cordis';
 import { REMOTE_PACKAGE, REMOTE_SERVICE } from '../contracts/remote-descriptors';
 import { inferFromAgentIdle, inferFromToolResult, inferFromToolStart, type StatusUpdate } from './status-inference';
@@ -519,6 +519,8 @@ export async function apply(ctx: Context, options: TravelNoteCompanionHostOption
   const props = (ctx.reflect as { props?: Record<string, unknown> }).props ?? {};
   console.log('[dsh-companion] diag: props =', Object.keys(props).filter((k) => k.includes('travel') || k.includes('companion')).join(','));
   console.log('[dsh-companion] diag: get(travelNoteCompanion) =', remote !== undefined);
+  console.log('[dsh-companion] diag: binding =', remote !== undefined ? remote.typertRemote.namespace : 'N/A');
+  console.log('[dsh-companion] diag: remoteMethods =', remote !== undefined ? remoteMethods(remote).map((m) => m.method).join(',') : 'N/A');
   // 主动通知 gateway 重置 SRC claims 缓存：Service 在 fiber LOADING 阶段注册，
   // 不会触发 Cordis 的 internal/service 通知（notify 仅在 ACTIVE 时执行）；若 gateway
   // 的 srcClaims 已在本插件加载前（web UI 初始化 remote 调用）缓存空集，端点将 404。
