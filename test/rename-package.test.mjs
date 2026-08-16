@@ -18,7 +18,7 @@ beforeAll(async () => {
   await writeFile(join(root, 'packages/hyc/package.json'),
     JSON.stringify({ name: '@your-scope/hyc', optionalDependencies: { '@your-scope/hyc-darwin-arm64': '0.1.0' } }));
   await writeFile(join(root, 'packages/dsh-companion/cordis.patch.yml'),
-    "- id: travel-note-companion\n  name: '@your-scope/dsh-companion'\n");
+    "- id: dsh-companion\n  name: '@your-scope/dsh-companion'\n");
   await writeFile(join(root, 'packages/dsh-companion/src/contracts/remote-descriptors.ts'),
     "export const REMOTE_PACKAGE = '@your-scope/dsh-companion';\n");
 });

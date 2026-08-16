@@ -1,5 +1,5 @@
 /**
- * travel-note-companion — Host half（node half of the dual-face dsh.client 包）。
+ * dsh-companion — Host half（node half of the dual-face dsh.client 包）。
  *
  * 通过 DSH Typert Gateway 提供正式 Client→Host RPC：
  * - travelNoteCompanion.buddy() —— 最新 buddy 消息 + 旅伴显示名称
@@ -49,7 +49,7 @@ declare module '@deepseek-ai/cordis' {
 }
 
 /** 插件身份标识（对齐「第一个插件」教程的 name 导出）。 */
-export const name = 'travel-note-companion';
+export const name = 'dsh-companion';
 
 export interface TravelNoteCompanionHostOptions {
   /** 鲸鱼娘资源根目录（默认走 travel-note-agent 仓库相对路径）。 */
@@ -369,10 +369,10 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
     ctx.effect(() =>
       ws.register({
         kind: 'exact',
-        path: '/api/travel-note-companion/ping',
+        path: '/api/dsh-companion/ping',
         handler: (_req, res) => {
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-          res.end(JSON.stringify({ ok: true, plugin: 'travel-note-companion' }));
+          res.end(JSON.stringify({ ok: true, plugin: 'dsh-companion' }));
         },
       }),
     );
@@ -437,13 +437,13 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
         },
       }),
     );
-    console.log('[travel-note-companion] webServer 路由已注册（apply 时 webServer 可用）');
+    console.log('[dsh-companion] webServer 路由已注册（apply 时 webServer 可用）');
   };
   registerRoutes();
   if (!routesRegistered) {
     ctx.on('internal/service', registerRoutes);
-    console.log('[travel-note-companion] apply 时 webServer 不可用，等待 internal/service 延迟注册');
+    console.log('[dsh-companion] apply 时 webServer 不可用，等待 internal/service 延迟注册');
   }
 
-  console.log('[travel-note-companion] host plugin loaded');
+  console.log('[dsh-companion] host plugin loaded');
 }

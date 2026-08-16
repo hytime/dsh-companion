@@ -1,9 +1,9 @@
 /**
- * travel-note-companion — Browser half（dsh.client exports["./client"] 的 Cordis 插件）。
+ * dsh-companion — Browser half（dsh.client exports["./client"] 的 Cordis 插件）。
  *
  * apply(ctx) 挂载 shell.overlay 的鲸鱼娘悬浮人物。
  * 正式插件没有动态插件的 `host` 全局：数据经 fetch 调用 Host half 的
- * webServer 路由（/api/travel-note-companion/*）。
+ * webServer 路由（/api/dsh-companion/*）。
  * 对话窗与控件使用 DSH ui-primitives（StateDot/Button）；回复按钮在
  * 主对话输入框注入 /hy-companion-chat。
  */
@@ -89,7 +89,7 @@ class WhaleBoundary extends React.Component<{ children: React.ReactNode }, { err
     return { error };
   }
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('[travel-note-companion] occupant render error:', error, info.componentStack);
+    console.error('[dsh-companion] occupant render error:', error, info.componentStack);
   }
   render() {
     if (this.state.error !== null) {
@@ -118,7 +118,7 @@ class WhaleBoundary extends React.Component<{ children: React.ReactNode }, { err
 }
 
 /** 插件身份标识（对齐「第一个插件」教程的 name 导出）。 */
-export const name = 'travel-note-companion';
+export const name = 'dsh-companion';
 
 export const inject = ['remote'];
 
@@ -135,7 +135,7 @@ export async function apply(ctx: PluginCtx) {
   slots.inject('shell.overlay', () => {
         const root = widgetCtx.get<SlotControl>('slots');
     if (root === undefined) return;
-    return root.register({ name: 'shell.overlay', id: 'travel-note-companion-whale' }, () => {
+    return root.register({ name: 'shell.overlay', id: 'dsh-companion-whale' }, () => {
       const [state, setState] = React.useState<WhaleStatus>({ status: 'idle' });
       const [buddy, setBuddy] = React.useState<BuddyInfo | null>(null);
       const [lastReply, setLastReply] = React.useState<LatestReplyInfo | null>(null);
