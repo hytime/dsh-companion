@@ -18,11 +18,12 @@ describe('dsh 发布配置', () => {
     expect(typeof (pkg.scripts as Record<string, unknown>).prepare).toBe('string');
     expect(pkg.version).not.toBe('0.0.0');
   });
-  it('peerDependencies 声明三个 @deepseek-ai 运行时包', () => {
+  it('peerDependencies 声明四个 @deepseek-ai 运行时包', () => {
     const peer = pkg.peerDependencies as Record<string, string>;
     expect(peer['@deepseek-ai/cordis']).toBeTruthy();
     expect(peer['@deepseek-ai/dsh-typert-protocol']).toBeTruthy();
     expect(peer['@deepseek-ai/dsh-client-ui-primitives']).toBeTruthy();
+    expect(peer['@deepseek-ai/dsh-client-ui-slots']).toBeTruthy();
   });
   it('cordis.patch.yml 插入的 name 等于包名', () => {
     expect(patch).toContain('@hytime/dsh-companion');

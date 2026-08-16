@@ -8,11 +8,15 @@
  * 主对话输入框注入 /hy-companion-chat。
  */
 import * as React from 'react';
+import type { SlotCore } from '@deepseek-ai/dsh-client-ui-slots';
 import { WhaleFloatingWidget } from '../components/whale-floating-widget';
 import type { AffectionStats, CompanionEmotion, SkillStatus } from '../contracts/skill-contract';
 import { EVENTS_URL } from '../contracts/remote-descriptors';
 import { normalizeSkillStatusUpdate } from '../state/skill-status-source';
+import type { CompanionRemoteFace } from './companion-types';
 import { travelNoteCompanionRemote } from './remote-contract';
+import { SettingsCard } from './settings-card';
+import type {} from './slot-contract';
 import '../styles/companion.module.css';
 
 interface PluginCtx {
@@ -21,42 +25,19 @@ interface PluginCtx {
   plugin(plugin: unknown): PromiseLike<void> & { dispose(): Promise<void> };
 }
 
-/** gateway 方法返回的 RemoteResult 包装：{ ok: true, value } 或 { ok: false, error }。 */
-type RemoteResult<T> = { ok: true; value: T } | { ok: false; error: { code: string; message: string } };
-
 /** gateway Client 面：ctx.remote.<namespace>.<method>()。 */
 interface RemoteFace {
   $mount(contribution: typeof travelNoteCompanionRemote): Promise<() => Promise<void>>;
-  travelNoteCompanion: {
-    buddy(): Promise<
-      RemoteResult<{
-        message: string;
-        title: string;
-        dueAt: string;
-        companionName: string;
-        userCallName: string;
-        affectionScore: number;
-        intimacyScore: number;
-        trustScore: number;
-        engagementScore: number;
-        talkativenessFactor: number;
-        proactiveProbabilityFactor: number;
-        cooldownFactor: number;
-        lastEvaluatedDate: string;
-        lastAnnouncedDate: string;
-      }>
-    >;
-    asset(frame: string): Promise<RemoteResult<{ url: string } | null>>;
-    status(): Promise<RemoteResult<{ status: string; lastError?: string }>>;
-    latestReply(): Promise<RemoteResult<{ reply: string; emotion: string } | null>>;
-  };
+  travelNoteCompanion: CompanionRemoteFace;
 }
 
-interface SlotControl {
-  register(
-    key: { name: string; id: string },
-    component: () => React.ReactElement,
-  ): unknown;
+/**
+ * slots 服务的本地投影：inject 等待 slot 声明后执行注册，register 即
+ * ui-slots SlotCore 的类型化注册（经 SlotMap 增强校验 slot 名与组合 props）。
+ */
+interface SlotsService {
+  inject(key: string, callback: () => void | (() => void) | Iterable<() => void>): () => void;
+  register: SlotCore['register'];
 }
 
 interface WhaleStatus {
@@ -127,13 +108,13 @@ export async function apply(ctx: PluginCtx) {
   const widgetFiber = ctx.plugin({
     inject: ['slots', 'remote', 'remote.travelNoteCompanion'],
     apply(widgetCtx: PluginCtx) {
-      const slots = widgetCtx.get<{ inject(key: string, cb: () => unknown): unknown }>('slots');
+      const slots = widgetCtx.get<SlotsService>('slots');
       if (slots === undefined) return;
       const timer = widgetCtx.get<{ interval(cb: () => void, ms: number): () => void }>('timer');
       const remote = widgetCtx.remote;
 
   slots.inject('shell.overlay', () => {
-        const root = widgetCtx.get<SlotControl>('slots');
+        const root = widgetCtx.get<SlotsService>('slots');
     if (root === undefined) return;
     return root.register({ name: 'shell.overlay', id: 'dsh-companion-whale' }, () => {
       const [state, setState] = React.useState<WhaleStatus>({ status: 'idle' });
@@ -298,6 +279,25 @@ export async function apply(ctx: PluginCtx) {
         }),
       );
     });
+      });
+
+      // 设置页配置卡：设置 → Plugins 区（settings.plugin.item 列表条目）。
+      // 经 inject 把 travelNoteCompanion 调用面注入卡片 props（与卡片实现解耦，
+      // 单测直接以 prop 注入假 remote）。
+      slots.inject('settings.plugin.item', () => {
+        const root = widgetCtx.get<SlotsService>('slots');
+        if (root === undefined) return;
+        return root.register(
+          {
+            name: 'settings.plugin.item',
+            id: 'dsh-companion',
+            order: 100,
+            label: 'dsh-companion',
+            registrant: 'dsh-companion',
+            inject: () => ({ remote: remote.travelNoteCompanion }),
+          },
+          SettingsCard,
+        );
       });
     },
   });

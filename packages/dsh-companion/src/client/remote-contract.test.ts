@@ -9,11 +9,35 @@ describe('travelNoteCompanionRemote', () => {
       'travelNoteCompanion/asset',
       'travelNoteCompanion/status',
       'travelNoteCompanion/latestReply',
+      'travelNoteCompanion/authStatus',
+      'travelNoteCompanion/login',
+      'travelNoteCompanion/register',
+      'travelNoteCompanion/logout',
+      'travelNoteCompanion/getConfig',
+      'travelNoteCompanion/setConfig',
+      'travelNoteCompanion/listSchedules',
+      'travelNoteCompanion/enableSchedule',
+      'travelNoteCompanion/disableSchedule',
+      'travelNoteCompanion/deleteSchedule',
     ]);
     for (const descriptor of travelNoteCompanionRemote.descriptors) {
       expect(descriptor.invocation).toEqual({ kind: 'direct' });
       expect(descriptor.result.mode).toBe('strict');
       expect(descriptor.parameters.every((parameter) => parameter.codec.mode === 'strict')).toBe(true);
+    }
+  });
+
+  it('uses wire parameter names matching the Host @Remote signatures', () => {
+    const byMethod = (method: string) =>
+      travelNoteCompanionRemote.descriptors.find((descriptor) => descriptor.method === method);
+    expect(byMethod('login')?.parameters.map((parameter) => parameter.wire)).toEqual(['username', 'password']);
+    expect(byMethod('register')?.parameters.map((parameter) => parameter.wire)).toEqual(['username', 'password']);
+    expect(byMethod('setConfig')?.parameters.map((parameter) => parameter.wire)).toEqual(['partial']);
+    expect(byMethod('enableSchedule')?.parameters.map((parameter) => parameter.wire)).toEqual(['id']);
+    expect(byMethod('disableSchedule')?.parameters.map((parameter) => parameter.wire)).toEqual(['id']);
+    expect(byMethod('deleteSchedule')?.parameters.map((parameter) => parameter.wire)).toEqual(['id']);
+    for (const method of ['authStatus', 'logout', 'getConfig', 'listSchedules']) {
+      expect(byMethod(method)?.parameters).toEqual([]);
     }
   });
 });
