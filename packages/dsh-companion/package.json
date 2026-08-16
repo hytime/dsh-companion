@@ -1,6 +1,6 @@
 {
   "name": "@hytime/dsh-companion",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "DSH Companion 鲸鱼 Skill/CLI 插件前端（dual-face Cordis 插件）",
   "license": "MIT",
   "author": "hytime",
