@@ -516,7 +516,8 @@ export async function apply(ctx: Context, options: TravelNoteCompanionHostOption
   await ctx.plugin(CompanionRemote);
   const remote = ctx.get(REMOTE_SERVICE) as CompanionRemote;
   // 诊断(临时):确认 SRC Remote 注册对 gateway 可见的条件
-  console.log('[dsh-companion] diag: props =', Object.keys(ctx.reflect.props).filter((k) => k.includes('travel') || k.includes('companion')).join(','));
+  const props = (ctx.reflect as { props?: Record<string, unknown> }).props ?? {};
+  console.log('[dsh-companion] diag: props =', Object.keys(props).filter((k) => k.includes('travel') || k.includes('companion')).join(','));
   console.log('[dsh-companion] diag: get(travelNoteCompanion) =', remote !== undefined);
   // 主动通知 gateway 重置 SRC claims 缓存：Service 在 fiber LOADING 阶段注册，
   // 不会触发 Cordis 的 internal/service 通知（notify 仅在 ACTIVE 时执行）；若 gateway
