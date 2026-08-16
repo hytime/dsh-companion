@@ -511,7 +511,10 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
   // 注册 SRC Remote 服务（共 14 个 @Remote：status / buddy / latestReply / asset +
   // authStatus / login / register / logout / getConfig / setConfig / listSchedules /
   // enableSchedule / disableSchedule / deleteSchedule），Gateway 自动发现。
-  const remote = new CompanionRemote(ctx);
+  // 必须用 ctx.plugin 挂载（fiber-owned）：手动 new 的实例虽经 Service 构造注册，
+  // 但 gateway 的 collectSrcClaims 只遍历 fiber-owned service，否则端点 404。
+  ctx.plugin(CompanionRemote);
+  const remote = ctx.get(REMOTE_SERVICE) as CompanionRemote;
 
   // 状态/数据 SSE 推送：Client 用 EventSource 订阅（命名事件 status/buddy/reply），
   // 替代三个 RPC 轮询。broadcast 向所有连接写一帧 SSE。

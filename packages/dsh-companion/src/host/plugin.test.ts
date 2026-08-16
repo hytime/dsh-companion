@@ -17,6 +17,7 @@ import {
   scheduleInitialPushes,
   selectPushChannels,
 } from './plugin';
+import { REMOTE_SERVICE } from '../contracts/remote-descriptors';
 import { DEFAULT_SETTINGS, readSettings, type CompanionSettings } from './settings-store';
 import type { SettingsRpcDeps } from './settings-rpc';
 
@@ -114,17 +115,20 @@ function makeRemote(options: {
   return new CompanionRemote(makeCtx(options.shell), options.deps ?? makeFakeDeps());
 }
 
-/** 假 ctx(apply 级):effect 同步执行(启动 buddy 定时器),on/get 记录即可。 */
-function makeApplyCtx(): Context {
-  return {
+/** 假 ctx(apply 级):effect 同步执行(启动 buddy 定时器),plugin 挂载钩子预建 remote(get 返回)。 */
+function makeApplyCtx(deps?: SettingsRpcDeps): Context {
+  const ctx = {
     reflect: { provide: vi.fn() },
-    get: (): unknown => undefined,
+    get: (name: string): unknown => (name === REMOTE_SERVICE ? remote : undefined),
     effect: (callback: () => void | (() => void)): (() => void) => {
       const disposer = callback();
       return typeof disposer === 'function' ? disposer : () => {};
     },
     on: vi.fn(),
+    plugin: vi.fn(() => ({})),
   } as unknown as Context;
+  const remote = new CompanionRemote(ctx, deps ?? makeFakeDeps());
+  return ctx;
 }
 
 describe('applySettingsToBuddy(名称/称呼/好感度开关消费)', () => {

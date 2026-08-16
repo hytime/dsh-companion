@@ -323,7 +323,7 @@
   }
 }
 
-/* ---- 设置页配置卡（settings 插件配置区卡片条目） ---- */
+/* ---- 设置页「我的鲸鱼娘」(settings section 独立页) ---- */
 
 .dsh-companion-settings-card {
   display: flex;
@@ -331,6 +331,25 @@
   gap: 18px;
   font-size: 13px;
   line-height: 1.6;
+  color: #1f2328;
+}
+
+.dsh-companion-settings-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dsh-companion-settings-card__header-logo {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+
+.dsh-companion-settings-card__header-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
   color: #1f2328;
 }
 

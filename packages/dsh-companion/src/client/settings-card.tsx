@@ -1,5 +1,5 @@
 /**
- * settings.plugin.item 配置卡 —— 设置 → Plugins 区的「旅伴」插件配置卡。
+ * settings.section 设置页 —— 设置面板左侧导航的「我的鲸鱼娘」独立页。
  *
  * 三区块（travel-note-agent 分组表单风格，全部内聚于本文件）：
  * - 账号与密码：登录/注册切换 + 前端校验（空账号密码 / 密码长度 / 两次一致），
@@ -16,16 +16,17 @@
 import * as React from 'react';
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 import type { CompanionRemoteFace, CompanionSettings, ScheduleItem } from './companion-types';
+import { DeepSeekLogo } from '../components/deepseek-logo';
 import type {} from './slot-contract';
 import styles from '../styles/companion.module.css';
 
-/** 注册时经 slots.register 的 inject 注入的业务面：本卡片的 remote 调用面。 */
+/** 注册时经 slots.register 的 inject 注入的业务面：本页面的 remote 调用面。 */
 export interface SettingsCardFace {
   remote: CompanionRemoteFace;
 }
 
-/** 组合 props：section 不提供 owner props，仅注入 remote。 */
-export type SettingsCardProps = PropsRuntime<'settings.plugin.item'> & InjectFace<SettingsCardFace>;
+/** 组合 props：section 提供 owner props（close），另注入 remote。 */
+export type SettingsCardProps = PropsRuntime<'settings.section'> & InjectFace<SettingsCardFace>;
 
 type AuthMode = 'login' | 'register';
 type AuthStatus = 'authenticated' | 'unauthenticated';
@@ -234,6 +235,10 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
 
   return (
     <div className={styles['dsh-companion-settings-card']}>
+      <header className={styles['dsh-companion-settings-card__header']}>
+        <DeepSeekLogo className={styles['dsh-companion-settings-card__header-logo']} />
+        <h3 className={styles['dsh-companion-settings-card__header-title']}>我的鲸鱼娘</h3>
+      </header>
       {loadState === 'loading' && (
         <p className={styles['dsh-companion-settings-card__notice']}>加载中…</p>
       )}

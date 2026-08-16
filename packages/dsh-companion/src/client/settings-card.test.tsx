@@ -66,13 +66,14 @@ function createRemote(overrides: Partial<CompanionRemoteFace> = {}): CompanionRe
 }
 
 function renderCard(remote: CompanionRemoteFace) {
-  return render(<SettingsCard remote={remote} />);
+  return render(<SettingsCard remote={remote} close={(): void => {}} />);
 }
 
 describe('SettingsCard', () => {
-  it('渲染三区块标题(账号与密码 / 基本配置 / 事件提醒)', async () => {
+  it('渲染页面头部(deepseek logo + 我的鲸鱼娘)与三区块标题', async () => {
     renderCard(createRemote());
-    expect(await screen.findByText('账号与密码')).toBeInTheDocument();
+    expect(screen.getByText('我的鲸鱼娘')).toBeInTheDocument();
+    expect(screen.getByText('账号与密码')).toBeInTheDocument();
     expect(screen.getByText('基本配置')).toBeInTheDocument();
     expect(screen.getByText('事件提醒')).toBeInTheDocument();
   });

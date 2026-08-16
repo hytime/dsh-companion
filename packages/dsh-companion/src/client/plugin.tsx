@@ -282,18 +282,18 @@ export async function apply(ctx: PluginCtx) {
     });
       });
 
-      // 设置页配置卡：设置 → Plugins 区（settings.plugin.item 列表条目）。
-      // 经 inject 把 travelNoteCompanion 调用面注入卡片 props（与卡片实现解耦，
-      // 单测直接以 prop 注入假 remote）。
-      slots.inject('settings.plugin.item', () => {
+      // 设置页独立入口：设置面板左侧导航的「我的鲸鱼娘」设置页
+      // （settings.section 列表条目）。经 inject 把 travelNoteCompanion
+      // 调用面注入页面 props（与页面实现解耦，单测直接以 prop 注入假 remote）。
+      slots.inject('settings.section', () => {
         const root = widgetCtx.get<SlotsService>('slots');
         if (root === undefined) return;
         return root.register(
           {
-            name: 'settings.plugin.item',
-            id: 'dsh-companion',
+            name: 'settings.section',
+            id: 'whale',
             order: 100,
-            label: 'dsh-companion',
+            label: '我的鲸鱼娘',
             registrant: 'dsh-companion',
             inject: () => ({ remote: remote.travelNoteCompanion }),
           },
