@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "hy-companion DSH 技能（11 个），安装到 $DSH_HOME/skills",
-  "bin": { "hy-companion-install": "bin/hy-companion-install.mjs" },
+  "bin": { "hy-companion-install": "bin/hy-companion-install.mjs", "hy-companion-check": "bin/hy-companion-check.mjs" },
   "files": ["skills/", "bin/", "lib/", "README.md"],
   "license": "MIT",
   "author": "hytime",
