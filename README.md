@@ -81,6 +81,17 @@ dsh plugin add @hytime/dsh-companion
 
 > 完整顺序与验证命令的权威说明见原来的 `travel-note-go/docs/hy-companion-dsh-install.md`。
 
+### 插件前置自愈（兜底路径）
+
+执行 `dsh plugin add @hytime/dsh-companion` 并重启 DSH 后，插件会在启动时自动检查 hyc CLI 与 DSH 技能，缺失时自动补齐，无需手动按序安装：
+
+- **hyc CLI 缺失** → 自动执行 `npm i -g @hytime/hyc`
+- **技能缺失** → 自动执行 `npm i -g @hytime/hy-companion-skills`，成功后继续执行 `hy-companion-install`
+
+自愈动作在后台异步执行、不阻塞插件加载。若任一前置安装失败，DSH 日志会打印手动指引，请按日志提示运行 `hy-companion-check` 或 `npm i -g @hytime/hyc` 补装。
+
+> 说明：插件自愈只是兜底。仍建议按上方 1 → 2 → 3 手动按序安装，以便尽早暴露依赖问题、避免插件首次加载时后台装包带来的额外等待。
+
 ---
 
 ## 本地开发循环（tarball）

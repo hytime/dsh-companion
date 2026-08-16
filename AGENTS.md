@@ -32,7 +32,7 @@ dsh-companion/
 ## 关键约定（红线）
 
 1. **禁用 `link:` 目录安装**：DSH profile 里禁止用目录链接安装插件，统一走「build → pack → 装 tarball → 重启 DSH」循环。原因：双实例（两个 React / Cordis）、构建时 `rm -rf lib` 冲突、绝对路径不可复现。
-2. **安装顺序不可颠倒**：先装 hyc CLI → 再装 DSH 技能 → 最后装前端插件，任一前置缺失先补齐，不得跳步。
+2. **安装顺序不可颠倒**：先装 hyc CLI → 再装 DSH 技能 → 最后装前端插件，任一前置缺失先补齐，不得跳步。插件加载时会自动检查并安装缺失前置（hyc CLI / 技能），可作兜底；仍建议按序手动安装，尽早暴露依赖问题。
 3. **scope 已定型 `@hytime`**：包名统一为 `@hytime/*`；仅当需要整体更换 scope 时才运行 `node scripts/rename-package.mjs <新scope>` 全局替换。
 4. **4 个子包均可直接发布**：均已声明 `publishConfig.access: public` 与 `license: MIT`；发布前需补 `repository` / `author`，并确认鲸鱼帧资源版权。
 5. **二进制构建依赖外部仓库**：`sync-skills.mjs` 与 `build-binaries.mjs` 需要 `TRAVEL_NOTE_GO` 指向 `travel-note-go` 仓库，默认 `/Volumes/hydisk/vsProject/travel-note-go`。
