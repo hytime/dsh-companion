@@ -1,0 +1,19 @@
+{
+  "name": "dsh-companion-release",
+  "private": true,
+  "version": "0.1.0",
+  "description": "DSH Companion 三件套（插件/技能/CLI）独立发布仓库",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "pack": "pnpm -r run pack",
+    "rename": "node scripts/rename-package.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "vitest": "^3.2.4"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": { "node": ">=20.0.0", "pnpm": ">=9.0.0" }
+}
