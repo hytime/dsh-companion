@@ -36,6 +36,7 @@ dsh-companion/
 3. **发布前必须 rename**：占位 scope 为 `@your-scope`，发布前运行 `node scripts/rename-package.mjs <npm用户名>` 全局替换。
 4. **4 个子包均可直接发布**：均已声明 `publishConfig.access: public` 与 `license: MIT`；发布前需补 `repository` / `author`，并确认鲸鱼帧资源版权。
 5. **二进制构建依赖外部仓库**：`sync-skills.mjs` 与 `build-binaries.mjs` 需要 `TRAVEL_NOTE_GO` 指向 `travel-note-go` 仓库，默认 `/Volumes/hydisk/vsProject/travel-note-go`。
+6. **git worktree 管理**：功能开发使用隔离 worktree（`.worktrees/<分支名>`）；同时存在的 worktree 最多 4 个；工作完成合并回主线后必须删除对应 worktree。
 
 ## 环境注意事项
 
