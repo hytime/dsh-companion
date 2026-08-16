@@ -6,6 +6,7 @@
   "bin": { "hyc": "bin/hyc.mjs" },
   "files": ["bin/", "README.md"],
   "license": "MIT",
+  "author": "hytime",
   "publishConfig": { "access": "public" },
   "optionalDependencies": { "@hytime/hyc-darwin-arm64": "0.1.0" },
   "scripts": { "test": "vitest run --config ../../vitest.packages.config.ts", "pack": "pnpm pack" }
