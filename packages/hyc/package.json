@@ -3,11 +3,27 @@
   "version": "0.1.0",
   "type": "module",
   "description": "hy-companion CLI（hyc）— 平台二进制分包分发",
-  "bin": { "hyc": "bin/hyc.mjs" },
-  "files": ["bin/", "README.md"],
+  "bin": {
+    "hyc": "bin/hyc.mjs"
+  },
+  "files": [
+    "bin/",
+    "README.md"
+  ],
   "license": "MIT",
   "author": "hytime",
-  "publishConfig": { "access": "public" },
-  "optionalDependencies": { "@hytime/hyc-darwin-arm64": "0.1.0" },
-  "scripts": { "test": "vitest run --config ../../vitest.packages.config.ts", "pack": "pnpm pack" }
+  "publishConfig": {
+    "access": "public"
+  },
+  "optionalDependencies": {
+    "@hytime/hyc-darwin-arm64": "0.1.0"
+  },
+  "scripts": {
+    "test": "vitest run --config ../../vitest.packages.config.ts",
+    "pack": "pnpm pack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hytime/dsh-companion.git"
+  }
 }

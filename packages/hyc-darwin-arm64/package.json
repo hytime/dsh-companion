@@ -2,10 +2,22 @@
   "name": "@hytime/hyc-darwin-arm64",
   "version": "0.1.0",
   "description": "hyc darwin-arm64 二进制",
-  "os": ["darwin"],
-  "cpu": ["arm64"],
-  "files": ["bin/"],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin/"
+  ],
   "license": "MIT",
   "author": "hytime",
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hytime/dsh-companion.git"
+  }
 }

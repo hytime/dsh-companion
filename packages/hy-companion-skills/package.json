@@ -3,10 +3,27 @@
   "version": "0.1.0",
   "type": "module",
   "description": "hy-companion DSH 技能（11 个），安装到 $DSH_HOME/skills",
-  "bin": { "hy-companion-install": "bin/hy-companion-install.mjs", "hy-companion-check": "bin/hy-companion-check.mjs" },
-  "files": ["skills/", "bin/", "lib/", "README.md"],
+  "bin": {
+    "hy-companion-install": "bin/hy-companion-install.mjs",
+    "hy-companion-check": "bin/hy-companion-check.mjs"
+  },
+  "files": [
+    "skills/",
+    "bin/",
+    "lib/",
+    "README.md"
+  ],
   "license": "MIT",
   "author": "hytime",
-  "publishConfig": { "access": "public" },
-  "scripts": { "test": "vitest run --config ../../vitest.packages.config.ts", "pack": "pnpm pack" }
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "vitest run --config ../../vitest.packages.config.ts",
+    "pack": "pnpm pack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hytime/dsh-companion.git"
+  }
 }
