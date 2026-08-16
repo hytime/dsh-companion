@@ -71,4 +71,4 @@ TRAVEL_NOTE_GO=<路径> node scripts/build-binaries.mjs    # 交叉编译 hyc �
 
 ## 详细文档
 
-- 安装 / 发布 / 开发全流程：[README.md](./README.md)
+- 用户使用说明：[README.md](./README.md)；开发 / 验证 / 发布全流程：[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
