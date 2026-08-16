@@ -7,3 +7,7 @@ dist/
 *.log
 .worktrees/
 .superpowers/
+
+# 内部工作文档(仅本地开发,不上 GitHub)
+AGENTS.md
+docs/superpowers/
