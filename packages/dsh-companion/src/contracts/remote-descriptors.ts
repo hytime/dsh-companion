@@ -10,6 +10,9 @@ export const REMOTE_PACKAGE = '@your-scope/dsh-companion';
 export const REMOTE_SERVICE = 'travelNoteCompanion';
 export const REMOTE_NAMESPACE = 'travelNoteCompanion';
 
+/** host 注册的 SSE 事件推送路由，由 REMOTE_PACKAGE 单点推导，避免改名时两处漂移。 */
+export const EVENTS_URL = `/plugins/${REMOTE_PACKAGE}/events`;
+
 export const BUDDY_METHOD = 'buddy';
 export const ASSET_METHOD = 'asset';
 export const LATEST_REPLY_METHOD = 'latestReply';

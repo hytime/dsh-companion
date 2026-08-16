@@ -10,6 +10,7 @@
 import * as React from 'react';
 import { WhaleFloatingWidget } from '../components/whale-floating-widget';
 import type { AffectionStats, CompanionEmotion, SkillStatus } from '../contracts/skill-contract';
+import { EVENTS_URL } from '../contracts/remote-descriptors';
 import { normalizeSkillStatusUpdate } from '../state/skill-status-source';
 import { travelNoteCompanionRemote } from './remote-contract';
 import '../styles/companion.module.css';
@@ -224,7 +225,7 @@ export async function apply(ctx: PluginCtx) {
         };
 
         if (typeof window !== 'undefined' && typeof window.EventSource === 'function') {
-          eventSource = new EventSource('/plugins/@your-scope/dsh-companion/events');
+          eventSource = new EventSource(EVENTS_URL);
           eventSource.onopen = () => stopFallback();
           eventSource.addEventListener('status', (event) => {
             try {
