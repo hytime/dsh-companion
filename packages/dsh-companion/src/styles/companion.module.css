@@ -359,6 +359,13 @@
   gap: 10px;
 }
 
+/* 账号区块的表单:field 是 form 的直接子元素,需与 section 同等的列间距(tab/输入框/按钮不贴在一起) */
+.dsh-companion-settings-card__section form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .dsh-companion-settings-card__title {
   margin: 0;
   font-size: 14px;
