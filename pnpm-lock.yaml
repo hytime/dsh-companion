@@ -75,7 +75,7 @@ importers:
   packages/hyc:
     optionalDependencies:
       '@hytime/hyc-darwin-arm64':
-        specifier: 0.1.0
+        specifier: 0.1.1
         version: link:../hyc-darwin-arm64
 
   packages/hyc-darwin-arm64: {}

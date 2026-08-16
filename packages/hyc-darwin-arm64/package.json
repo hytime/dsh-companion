@@ -1,6 +1,6 @@
 {
   "name": "@hytime/hyc-darwin-arm64",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "hyc darwin-arm64 二进制",
   "os": [
     "darwin"
