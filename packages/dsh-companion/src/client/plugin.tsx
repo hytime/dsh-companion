@@ -189,7 +189,9 @@ export async function apply(ctx: PluginCtx) {
                 if (result.ok) applyStatus(result.value);
               })
               .catch(() => {});
-            // 兜底轮询的 buddy 通道受 reminderEnabled 守卫（与 host 30s 轮询/SSE
+            // 兜底轮询固定 30s：间隔配置(reminderIntervalMin)由 host 轮询消费，
+            // 客户端不跟随配置调整间隔，仅在 SSE 断连期间保底。
+            // 兜底轮询的 buddy 通道受 reminderEnabled 守卫（与 host 轮询/SSE
             // 初次推送一致）：先读配置，关闭提醒时不采集也不 setBuddy；配置读取
             // 失败回退为照常推送（fail-open）。函数内部已吞掉 buddy 采集异常。
             void fetchBuddyIfRemindersEnabled(remote.travelNoteCompanion, applyBuddy);

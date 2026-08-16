@@ -51,6 +51,8 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [authError, setAuthError] = React.useState('');
   const [authPending, setAuthPending] = React.useState(false);
+  /** 退出登录请求进行中(防止双击并发两次 hyc logout)。 */
+  const [logoutPending, setLogoutPending] = React.useState(false);
 
   // ---- 基本配置 ----
   const [companionName, setCompanionName] = React.useState('');
@@ -155,11 +157,17 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   };
 
   const onLogout = async (): Promise<void> => {
-    const result = await remote.logout();
-    if (result.ok && result.value.ok) {
-      setAuthStatus('unauthenticated');
-    } else {
-      setAuthError(result.ok ? result.value.error ?? '退出失败' : result.error.message);
+    if (logoutPending) return;
+    setLogoutPending(true);
+    try {
+      const result = await remote.logout();
+      if (result.ok && result.value.ok) {
+        setAuthStatus('unauthenticated');
+      } else {
+        setAuthError(result.ok ? result.value.error ?? '退出失败' : result.error.message);
+      }
+    } finally {
+      setLogoutPending(false);
     }
   };
 
@@ -240,8 +248,8 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
         {authStatus === 'authenticated' ? (
           <div className={styles['dsh-companion-settings-card__row']}>
             <span className={styles['dsh-companion-settings-card__hint']}>已登录</span>
-            <button type="button" onClick={() => void onLogout()}>
-              退出登录
+            <button type="button" disabled={logoutPending} onClick={() => void onLogout()}>
+              {logoutPending ? '退出中…' : '退出登录'}
             </button>
           </div>
         ) : (
@@ -361,7 +369,11 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
             {configError}
           </p>
         )}
-        {configSaved && <p className={styles['dsh-companion-settings-card__hint']}>已保存</p>}
+        {configSaved && (
+          <p role="status" className={styles['dsh-companion-settings-card__hint']}>
+            已保存
+          </p>
+        )}
       </section>
 
       <section className={styles['dsh-companion-settings-card__section']}>
@@ -400,7 +412,11 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
             {reminderError}
           </p>
         )}
-        {reminderSaved && <p className={styles['dsh-companion-settings-card__hint']}>已保存</p>}
+        {reminderSaved && (
+          <p role="status" className={styles['dsh-companion-settings-card__hint']}>
+            已保存
+          </p>
+        )}
         {schedules.length > 0 && (
           <ul className={styles['dsh-companion-settings-card__list']}>
             {schedules.map((item) => (

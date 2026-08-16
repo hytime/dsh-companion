@@ -190,6 +190,49 @@ describe('SettingsCard', () => {
     expect(await screen.findByText('已保存')).toBeInTheDocument();
   });
 
+  it('基本配置保存成功的「已保存」提示带 role=status(无障碍通知)', async () => {
+    const remote = createRemote();
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByText('基本配置');
+    await user.click(screen.getByRole('button', { name: '保存配置' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('已保存');
+  });
+
+  it('提醒保存成功的「已保存」提示带 role=status(无障碍通知)', async () => {
+    const remote = createRemote();
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByText('事件提醒');
+    await user.click(screen.getByRole('button', { name: '保存提醒' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('已保存');
+  });
+
+  it('退出登录:logoutPending 期间按钮禁用并显示「退出中…」,重复点击不并发 logout,完成后恢复', async () => {
+    const logoutDeferred = createDeferred<Awaited<ReturnType<CompanionRemoteFace['logout']>>>();
+    const remote = createRemote({
+      authStatus: vi.fn<CompanionRemoteFace['authStatus']>(async () => ({
+        ok: true as const,
+        value: { ok: true as const, status: 'authenticated' as const },
+      })),
+      logout: vi.fn<CompanionRemoteFace['logout']>(() => logoutDeferred.promise),
+    });
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByText('退出登录');
+    await user.click(screen.getByRole('button', { name: '退出登录' }));
+    // pending:按钮禁用 + 文案「退出中…」
+    const pendingBtn = screen.getByRole('button', { name: '退出中…' });
+    expect(pendingBtn).toBeDisabled();
+    // 重复点击不触发第二次 logout
+    await user.click(pendingBtn);
+    expect(remote.logout).toHaveBeenCalledTimes(1);
+    // 完成后:认证状态切回未登录,「退出登录」消失、登录表单恢复
+    logoutDeferred.resolve({ ok: true as const, value: { ok: true as const } });
+    await waitFor(() => expect(screen.queryByRole('button', { name: '退出登录' })).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: '登录' })).toBeEnabled();
+  });
+
   it('提交中:登录提交 pending 期间按钮禁用并显示「提交中…」,双击不重复提交,完成后恢复', async () => {
     const loginDeferred = createDeferred<Awaited<ReturnType<CompanionRemoteFace['login']>>>();
     const remote = createRemote({

@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 /**
  * companion-commands —— 认证与 schedule 命令执行模块。
  *
- * 所有命令执行都经由可注入的 run(cmd, args, options?) 完成（缺省 spawnSync），
+ * 所有命令执行都经由可注入的 run(cmd, args, options?) 完成（缺省 spawnSync + 30s 超时），
  * 便于单测注入替身断言命令构造与 stdin 喂入，避免测试触碰真实 hyc / 终端。
  *
  * 命令形态与真实 hyc CLI 对齐（已对线上二进制逐条核实）：
@@ -61,11 +61,20 @@ export interface ScheduleListResult {
 
 export type ScheduleAction = 'enable' | 'disable' | 'delete';
 
-/** 缺省命令执行器：spawnSync + utf8，input 经 stdin 喂入。 */
+/**
+ * hyc 命令同步执行超时(ms)。authStatus/login/register/logout/listSchedules/
+ * scheduleAction 全部经 spawnSync 同步执行,一旦 hyc 挂起会阻塞整个 DSH host
+ * 事件循环;超时后 spawnSync 以 `{ status:null, error: { code:'ETIMEDOUT' } }`
+ * 形态返回(不抛出),走现有 passthroughError 错误透传路径。
+ */
+export const COMMAND_TIMEOUT_MS = 30_000;
+
+/** 缺省命令执行器:spawnSync + utf8 + 30s 超时,input 经 stdin 喂入。 */
 const defaultRun: RunCmd = (cmd, args, options) =>
   spawnSync(cmd, args, {
     input: options?.input,
     encoding: 'utf8',
+    timeout: COMMAND_TIMEOUT_MS,
   });
 
 /** script 伪终端不可用（非 POSIX 平台/无 script 命令）时的固定提示。 */

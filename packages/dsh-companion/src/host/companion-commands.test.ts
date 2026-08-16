@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   checkAuthStatus,
+  COMMAND_TIMEOUT_MS,
   listSchedules,
   loginWithCredentials,
   logout,
@@ -128,6 +129,33 @@ describe('logout', () => {
     const run = () => ({ status: 4, stdout: '{"error":"无法清除登录凭据"}' });
     const result = await logout({ run });
     expect(result).toEqual({ ok: false, error: '无法清除登录凭据' });
+  });
+});
+
+describe('hyc 挂起超时保护(spawnSync timeout 的 ETIMEDOUT 形态)', () => {
+  it('defaultRun 配置 30s 同步执行超时(挂起时以 ETIMEDOUT 返回,不无限阻塞 DSH host 事件循环)', () => {
+    expect(COMMAND_TIMEOUT_MS).toBe(30_000);
+  });
+
+  it('logout:注入超时形态(status:null + error ETIMEDOUT)→ ok:false 且错误原样透传,不抛出', async () => {
+    const timedOut: NodeJS.ErrnoException = new Error('spawnSync hyc ETIMEDOUT');
+    timedOut.code = 'ETIMEDOUT';
+    const result = await logout({ run: () => ({ status: null, error: timedOut }) });
+    expect(result).toEqual({ ok: false, error: 'spawnSync hyc ETIMEDOUT' });
+  });
+
+  it('login:ETIMEDOUT 不等于 ENOENT → 不走「平台不支持」分支,错误原样透传', async () => {
+    const timedOut: NodeJS.ErrnoException = new Error('spawnSync script ETIMEDOUT');
+    timedOut.code = 'ETIMEDOUT';
+    const result = await loginWithCredentials('hytime', 'secret', { run: () => ({ error: timedOut }) });
+    expect(result).toEqual({ ok: false, error: 'spawnSync script ETIMEDOUT' });
+  });
+
+  it('scheduleAction:超时形态 → ok:false 且错误原样透传', async () => {
+    const timedOut: NodeJS.ErrnoException = new Error('spawnSync hyc ETIMEDOUT');
+    timedOut.code = 'ETIMEDOUT';
+    const result = await scheduleAction('enable', 'id-1', { run: () => ({ status: null, error: timedOut }) });
+    expect(result).toEqual({ ok: false, error: 'spawnSync hyc ETIMEDOUT' });
   });
 });
 

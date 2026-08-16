@@ -11,7 +11,8 @@
  *
  * 配置消费：apply 启动时 readSettings 注入 CompanionRemote；buddy() 用配置覆盖
  * 线上人格的名称/称呼（空值回退线上）、showAffection=false 时抑制好感度字段；
- * latestReply()/回复轮询在 showBubble=false 时置空；buddy 30s 轮询与 SSE 连接
+ * latestReply()/回复轮询在 showBubble=false 时置空；buddy 轮询（间隔由
+ * reminderIntervalMin 配置驱动，下限 30s，配置变更时重启定时器）与 SSE 连接
  * 建立时的初次推送在 reminderEnabled=false 时跳过（scheduleInitialPushes）；
  * setConfig 成功后 host 重读配置并推送新状态（不走通道守卫，保证即时生效）。
  *
@@ -170,6 +171,50 @@ export function applySettingsToBuddy(base: BuddyBase, settings: CompanionSetting
 /** 周期推送通道开关：reminderEnabled=false 跳过 buddy 轮询；showBubble=false 跳过回复轮询。 */
 export function selectPushChannels(settings: CompanionSettings): { buddy: boolean; reply: boolean } {
   return { buddy: settings.reminderEnabled, reply: settings.showBubble };
+}
+
+/**
+ * buddy 轮询间隔换算(ms)：由 reminderIntervalMin 配置驱动(分钟 → ms)，
+ * 下限 30s；0/负值/NaN 等非法值兜底 30s(见 DEFAULT_SETTINGS.reminderIntervalMin=60
+ * 时缺省轮询为 60 分钟,这是配置消费的预期行为)。
+ */
+export function buddyPollIntervalMs(settings: CompanionSettings): number {
+  const interval = settings.reminderIntervalMin * 60_000;
+  return Number.isFinite(interval) && interval >= 30_000 ? interval : 30_000;
+}
+
+/** createBuddyTimer 的注入依赖面：取当前配置 + 每 tick 的采集动作。 */
+export interface BuddyTimerDeps {
+  getSettings(): CompanionSettings;
+  tick(): void;
+}
+
+/**
+ * buddy 周期推送定时器：间隔按 buddyPollIntervalMs(getSettings()) 换算，
+ * 每 tick 先过 selectPushChannels().buddy 守卫(reminderEnabled=false 不采集)。
+ * restart() 用于配置变更后以新间隔重建定时器(start/restart 前未 start 等价)；
+ * dispose() 清理定时器(插件卸载 / 生命周期收尾)。
+ */
+export function createBuddyTimer(deps: BuddyTimerDeps): {
+  start(): void;
+  restart(): void;
+  dispose(): void;
+} {
+  let timer: ReturnType<typeof setInterval> | undefined;
+  const start = (): void => {
+    if (timer !== undefined) clearInterval(timer);
+    timer = setInterval(() => {
+      if (selectPushChannels(deps.getSettings()).buddy) deps.tick();
+    }, buddyPollIntervalMs(deps.getSettings()));
+  };
+  return {
+    start,
+    restart: start,
+    dispose: (): void => {
+      if (timer !== undefined) clearInterval(timer);
+      timer = undefined;
+    },
+  };
 }
 
 /**
@@ -505,26 +550,34 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
     }
   };
 
+  // buddy 周期推送：间隔由配置 reminderIntervalMin 驱动（下限 30s，见
+  // buddyPollIntervalMs）。配置变更（setConfig 成功重读）时经 restart()
+  // 以新间隔重建定时器；每 tick 的 reminderEnabled 守卫见 createBuddyTimer。
+  const buddyTimer = createBuddyTimer({
+    getSettings: () => remote.getSettings(),
+    tick: () => void pushBuddy(),
+  });
+
   // 配置变化（Client setConfig 成功）→ host 主动重读配置并推送新状态：
-  // 名称/称呼/好感度开关即时生效，无需重启插件。
+  // 名称/称呼/好感度开关即时生效，无需重启插件；buddy 轮询间隔可能变化，重启定时器。
   remote.setOnConfigApplied(() => {
     void readSettings({}).then((settings) => {
       remote.applySettings(settings);
+      buddyTimer.restart();
       void pushBuddy();
     });
   });
 
   // 周期任务随插件生命周期清理。通道按当前配置逐 tick 决策：
-  // reminderEnabled=false 跳过 buddy 30s 轮询；showBubble=false 跳过回复 5s 轮询。
+  // reminderEnabled=false 跳过 buddy 轮询（间隔由 reminderIntervalMin 驱动，
+  // 下限 30s）；showBubble=false 跳过回复 5s 轮询。
   ctx.effect(() => {
-    const buddyTimer = setInterval(() => {
-      if (selectPushChannels(remote.getSettings()).buddy) void pushBuddy();
-    }, 30_000);
+    buddyTimer.start();
     const replyTimer = setInterval(() => {
       if (selectPushChannels(remote.getSettings()).reply) void pushReply();
     }, 5_000);
     return () => {
-      clearInterval(buddyTimer);
+      buddyTimer.dispose();
       clearInterval(replyTimer);
     };
   });

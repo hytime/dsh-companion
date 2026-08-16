@@ -8,7 +8,14 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { Context } from '@deepseek-ai/cordis';
-import { applySettingsToBuddy, CompanionRemote, scheduleInitialPushes, selectPushChannels } from './plugin';
+import {
+  applySettingsToBuddy,
+  buddyPollIntervalMs,
+  CompanionRemote,
+  createBuddyTimer,
+  scheduleInitialPushes,
+  selectPushChannels,
+} from './plugin';
 import { DEFAULT_SETTINGS, type CompanionSettings } from './settings-store';
 import type { SettingsRpcDeps } from './settings-rpc';
 
@@ -146,6 +153,83 @@ describe('selectPushChannels(周期推送通道开关)', () => {
 
   it('缺省配置两个通道都开启', () => {
     expect(selectPushChannels({ ...DEFAULT_SETTINGS })).toEqual({ buddy: true, reply: true });
+  });
+});
+
+describe('buddyPollIntervalMs(提醒间隔配置 → 轮询间隔换算)', () => {
+  it('reminderIntervalMin=5 → 300_000ms(配置驱动)', () => {
+    expect(buddyPollIntervalMs({ ...DEFAULT_SETTINGS, reminderIntervalMin: 5 })).toBe(300_000);
+  });
+
+  it('reminderIntervalMin=0 → 30_000ms(下限 30s)', () => {
+    expect(buddyPollIntervalMs({ ...DEFAULT_SETTINGS, reminderIntervalMin: 0 })).toBe(30_000);
+  });
+
+  it('缺省配置(reminderIntervalMin=60)→ 3_600_000ms(配置驱动生效,30s 仅作下限)', () => {
+    expect(buddyPollIntervalMs({ ...DEFAULT_SETTINGS })).toBe(3_600_000);
+  });
+
+  it('负值/NaN → 30_000ms(兜底下限)', () => {
+    expect(buddyPollIntervalMs({ ...DEFAULT_SETTINGS, reminderIntervalMin: -5 })).toBe(30_000);
+    expect(buddyPollIntervalMs({ ...DEFAULT_SETTINGS, reminderIntervalMin: Number.NaN })).toBe(30_000);
+  });
+});
+
+describe('createBuddyTimer(配置驱动间隔 + 配置变更重启)', () => {
+  it('start:按当前配置换算间隔创建定时器;reminderEnabled=false 时 tick 不执行', () => {
+    vi.useFakeTimers();
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const getSettings = vi.fn(() => ({ ...DEFAULT_SETTINGS, reminderEnabled: false, reminderIntervalMin: 5 }));
+    const tick = vi.fn();
+    const timer = createBuddyTimer({ getSettings, tick });
+    timer.start();
+    expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 300_000);
+    vi.advanceTimersByTime(300_000);
+    expect(tick).not.toHaveBeenCalled();
+    timer.dispose();
+    vi.useRealTimers();
+  });
+
+  it('reminderEnabled=true:一个间隔后 tick 恰好执行一次', () => {
+    vi.useFakeTimers();
+    const getSettings = vi.fn(() => ({ ...DEFAULT_SETTINGS, reminderIntervalMin: 1 }));
+    const tick = vi.fn();
+    const timer = createBuddyTimer({ getSettings, tick });
+    timer.start();
+    vi.advanceTimersByTime(60_000);
+    expect(tick).toHaveBeenCalledTimes(1);
+    timer.dispose();
+    vi.useRealTimers();
+  });
+
+  it('restart:配置变更后以新间隔重建定时器(旧定时器被清理)', () => {
+    vi.useFakeTimers();
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const getSettings = vi.fn(() => ({ ...DEFAULT_SETTINGS, reminderIntervalMin: 5 }));
+    const tick = vi.fn();
+    const timer = createBuddyTimer({ getSettings, tick });
+    timer.start();
+    expect(intervalSpy).toHaveBeenLastCalledWith(expect.any(Function), 300_000);
+    getSettings.mockReturnValue({ ...DEFAULT_SETTINGS, reminderIntervalMin: 0 });
+    timer.restart();
+    expect(intervalSpy).toHaveBeenLastCalledWith(expect.any(Function), 30_000);
+    // 旧 5 分钟定时器已清理:推进 31s 只触发新 30s 定时器一次
+    vi.advanceTimersByTime(31_000);
+    expect(tick).toHaveBeenCalledTimes(1);
+    timer.dispose();
+    vi.useRealTimers();
+  });
+
+  it('dispose:清理定时器后不再触发', () => {
+    vi.useFakeTimers();
+    const getSettings = vi.fn(() => ({ ...DEFAULT_SETTINGS, reminderIntervalMin: 1 }));
+    const tick = vi.fn();
+    const timer = createBuddyTimer({ getSettings, tick });
+    timer.start();
+    timer.dispose();
+    vi.advanceTimersByTime(120_000);
+    expect(tick).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });
 
