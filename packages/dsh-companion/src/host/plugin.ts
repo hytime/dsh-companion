@@ -193,7 +193,8 @@ export interface BuddyTimerDeps {
  * buddy 周期推送定时器：间隔按 buddyPollIntervalMs(getSettings()) 换算，
  * 每 tick 先过 selectPushChannels().buddy 守卫(reminderEnabled=false 不采集)。
  * restart() 用于配置变更后以新间隔重建定时器(start/restart 前未 start 等价)；
- * dispose() 清理定时器(插件卸载 / 生命周期收尾)。
+ * dispose() 清理定时器并置 disposed 守卫(插件卸载 / 生命周期收尾),
+ * 此后 start/restart 直接返回,不复活定时器(卸载竞态防护)。
  */
 export function createBuddyTimer(deps: BuddyTimerDeps): {
   start(): void;
@@ -201,7 +202,11 @@ export function createBuddyTimer(deps: BuddyTimerDeps): {
   dispose(): void;
 } {
   let timer: ReturnType<typeof setInterval> | undefined;
+  // disposed 守卫:dispose 后 start/restart 直接返回,不再新建定时器。
+  // 防止卸载竞态(setConfig RPC 在插件卸载后才 resolve 的 restart)复活并泄漏。
+  let disposed = false;
   const start = (): void => {
+    if (disposed) return;
     if (timer !== undefined) clearInterval(timer);
     timer = setInterval(() => {
       if (selectPushChannels(deps.getSettings()).buddy) deps.tick();
@@ -211,6 +216,7 @@ export function createBuddyTimer(deps: BuddyTimerDeps): {
     start,
     restart: start,
     dispose: (): void => {
+      disposed = true;
       if (timer !== undefined) clearInterval(timer);
       timer = undefined;
     },
@@ -507,10 +513,6 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
   // enableSchedule / disableSchedule / deleteSchedule），Gateway 自动发现。
   const remote = new CompanionRemote(ctx);
 
-  // 配置消费：apply 启动时读取配置并注入（fire-and-forget，读取失败回缺省，
-  // 与 runSelfHeal 同一模式，不阻塞 apply）。setConfig 成功后经 onConfigApplied 重读。
-  void readSettings({}).then((settings) => remote.applySettings(settings));
-
   // 状态/数据 SSE 推送：Client 用 EventSource 订阅（命名事件 status/buddy/reply），
   // 替代三个 RPC 轮询。broadcast 向所有连接写一帧 SSE。
   const sseClients = new Set<SseClient>();
@@ -556,6 +558,16 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
   const buddyTimer = createBuddyTimer({
     getSettings: () => remote.getSettings(),
     tick: () => void pushBuddy(),
+  });
+
+  // 配置消费：apply 启动时读取配置并注入（fire-and-forget，读取失败回缺省，
+  // 与 runSelfHeal 同一模式，不阻塞 apply）。必须放在 buddyTimer 创建之后：
+  // 读回持久化的 reminderIntervalMin 后立即 restart 重建轮询定时器（与
+  // onConfigApplied 一致），否则每次 DSH 重启都按缺省 60s 轮询，直到下一次
+  // setConfig 才经 restart 纠正。setConfig 成功后经 onConfigApplied 重读。
+  void readSettings({}).then((settings) => {
+    remote.applySettings(settings);
+    buddyTimer.restart();
   });
 
   // 配置变化（Client setConfig 成功）→ host 主动重读配置并推送新状态：

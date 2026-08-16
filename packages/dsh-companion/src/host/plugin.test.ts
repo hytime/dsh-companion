@@ -9,6 +9,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Context } from '@deepseek-ai/cordis';
 import {
+  apply,
   applySettingsToBuddy,
   buddyPollIntervalMs,
   CompanionRemote,
@@ -16,8 +17,19 @@ import {
   scheduleInitialPushes,
   selectPushChannels,
 } from './plugin';
-import { DEFAULT_SETTINGS, type CompanionSettings } from './settings-store';
+import { DEFAULT_SETTINGS, readSettings, type CompanionSettings } from './settings-store';
 import type { SettingsRpcDeps } from './settings-rpc';
+
+// apply 级测试的模块级替身:
+// - readSettings:可控 resolve 时机(启动路径断言 restart 在持久化读回之后发生)
+// - runSelfHeal:不触发真实 hyc 探测 / npm 全局安装
+vi.mock('./settings-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./settings-store')>();
+  return { ...actual, readSettings: vi.fn() };
+});
+vi.mock('./prereq-self-heal', () => ({
+  runSelfHeal: vi.fn().mockResolvedValue(undefined),
+}));
 
 /** 线上 hyc 采集的完整 buddy 基础载荷(人格 + 好感度)。 */
 const ONLINE_BASE = {
@@ -100,6 +112,19 @@ function makeRemote(options: {
   deps?: SettingsRpcDeps;
 } = {}): CompanionRemote {
   return new CompanionRemote(makeCtx(options.shell), options.deps ?? makeFakeDeps());
+}
+
+/** 假 ctx(apply 级):effect 同步执行(启动 buddy 定时器),on/get 记录即可。 */
+function makeApplyCtx(): Context {
+  return {
+    reflect: { provide: vi.fn() },
+    get: (): unknown => undefined,
+    effect: (callback: () => void | (() => void)): (() => void) => {
+      const disposer = callback();
+      return typeof disposer === 'function' ? disposer : () => {};
+    },
+    on: vi.fn(),
+  } as unknown as Context;
 }
 
 describe('applySettingsToBuddy(名称/称呼/好感度开关消费)', () => {
@@ -231,6 +256,23 @@ describe('createBuddyTimer(配置驱动间隔 + 配置变更重启)', () => {
     expect(tick).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
+
+  it('dispose 后 restart 不复活定时器(disposed 守卫,卸载竞态不泄漏)', () => {
+    vi.useFakeTimers();
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const getSettings = vi.fn(() => ({ ...DEFAULT_SETTINGS, reminderIntervalMin: 1 }));
+    const tick = vi.fn();
+    const timer = createBuddyTimer({ getSettings, tick });
+    timer.start();
+    expect(intervalSpy).toHaveBeenCalledTimes(1);
+    // 模拟 setConfig RPC 在插件卸载后才 resolve 的竞态:dispose 后 restart 直接返回
+    timer.dispose();
+    timer.restart();
+    expect(intervalSpy).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(120_000);
+    expect(tick).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
 });
 
 describe('scheduleInitialPushes(SSE 连接建立时的初次推送)', () => {
@@ -323,5 +365,38 @@ describe('CompanionRemote 配置消费集成', () => {
     remote.setOnConfigApplied(onConfigApplied);
     await remote.setConfig({ companionName: '小鲸' });
     expect(onConfigApplied).not.toHaveBeenCalled();
+  });
+});
+
+describe('apply(启动路径:初始 readSettings 完成后 restart 重建定时器)', () => {
+  it('持久化 reminderIntervalMin 在启动读回后经 restart 生效(不等下一次 setConfig)', async () => {
+    vi.useFakeTimers();
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const clearSpy = vi.spyOn(globalThis, 'clearInterval');
+    let resolveRead!: (settings: CompanionSettings) => void;
+    const readPromise = new Promise<CompanionSettings>((resolve) => {
+      resolveRead = resolve;
+    });
+    vi.mocked(readSettings).mockImplementation(() => readPromise);
+
+    apply(makeApplyCtx());
+
+    // 读回完成前:只按缺省快照建 buddy 定时器(60s)与回复定时器(5s),
+    // 尚无 restart(旧实现此处就漏掉了持久化间隔)
+    expect(intervalSpy).toHaveBeenCalledTimes(2);
+    expect(intervalSpy).toHaveBeenNthCalledWith(1, expect.any(Function), 60_000);
+    expect(intervalSpy).toHaveBeenNthCalledWith(2, expect.any(Function), 5_000);
+
+    // 初始 readSettings 延迟 resolve:持久化间隔(5 分钟)注入后 restart 重建
+    resolveRead({ ...DEFAULT_SETTINGS, reminderIntervalMin: 5 });
+    await readPromise;
+    await Promise.resolve();
+
+    expect(intervalSpy).toHaveBeenCalledTimes(3);
+    expect(intervalSpy).toHaveBeenNthCalledWith(3, expect.any(Function), 300_000);
+    expect(clearSpy).toHaveBeenCalledTimes(1);
+
+    vi.mocked(readSettings).mockReset();
+    vi.useRealTimers();
   });
 });
