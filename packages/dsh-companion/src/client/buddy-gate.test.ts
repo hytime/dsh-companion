@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS: CompanionSettings = {
   showAffection: true,
   showBubble: true,
   reminderEnabled: true,
-  reminderIntervalMin: 60,
+  reminderIntervalMin: 1,
 };
 
 const BUDDY: BuddyResult = {

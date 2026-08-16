@@ -165,8 +165,8 @@ describe('buddyPollIntervalMs(提醒间隔配置 → 轮询间隔换算)', () =>
     expect(buddyPollIntervalMs({ ...DEFAULT_SETTINGS, reminderIntervalMin: 0 })).toBe(30_000);
   });
 
-  it('缺省配置(reminderIntervalMin=60)→ 3_600_000ms(配置驱动生效,30s 仅作下限)', () => {
-    expect(buddyPollIntervalMs({ ...DEFAULT_SETTINGS })).toBe(3_600_000);
+  it('缺省配置(reminderIntervalMin=1)→ 60_000ms(配置驱动生效,30s 仅作下限)', () => {
+    expect(buddyPollIntervalMs({ ...DEFAULT_SETTINGS })).toBe(60_000);
   });
 
   it('负值/NaN → 30_000ms(兜底下限)', () => {

@@ -175,8 +175,8 @@ export function selectPushChannels(settings: CompanionSettings): { buddy: boolea
 
 /**
  * buddy 轮询间隔换算(ms)：由 reminderIntervalMin 配置驱动(分钟 → ms)，
- * 下限 30s；0/负值/NaN 等非法值兜底 30s(见 DEFAULT_SETTINGS.reminderIntervalMin=60
- * 时缺省轮询为 60 分钟,这是配置消费的预期行为)。
+ * 下限 30s；0/负值/NaN 等非法值兜底 30s(见 DEFAULT_SETTINGS.reminderIntervalMin=1
+ * 时缺省轮询为 1 分钟,这是配置消费的预期行为)。
  */
 export function buddyPollIntervalMs(settings: CompanionSettings): number {
   const interval = settings.reminderIntervalMin * 60_000;

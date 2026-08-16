@@ -47,13 +47,14 @@ DSH 设置 → Plugins → dsh-companion 配置卡(settings.plugin.item)
   "showAffection": true,
   "showBubble": true,
   "reminderEnabled": true,
-  "reminderIntervalMin": 60
+  "reminderIntervalMin": 1
 }
 ```
 
 - 缺省值如上;文件不存在时返回缺省,不报错
 - `setConfig` 深合并(部分字段更新),只写这 6 个字段
 - 登录/注册/登出不写入 config(凭据只在 Keychain,由 hyc 管理)
+- **`reminderIntervalMin` 消费语义**:该值 = host buddy 轮询频率(分钟),轮询间隔 = max(30s, reminderIntervalMin × 60s);缺省 1 分钟 → 轮询间隔 60s(非法值兜底 30s)
 
 ## UI 布局(三区块)
 
@@ -69,7 +70,7 @@ DSH 设置 → Plugins → dsh-companion 配置卡(settings.plugin.item)
 │   旅伴名称 [____]  用户称呼 [____]            │
 │   ☑ 显示好感度   ☑ 显示回复气泡               │
 │ ③ 事件提醒                                    │
-│   ☑ 启用 buddy 提醒  间隔 [60] 分钟           │
+│   ☑ 启用 buddy 提醒  间隔 [1] 分钟           │
 │   定时事件列表:标题/时间 [启用|停用][删除]    │
 │   [保存配置]  ✓ 已保存 / ✗ 错误信息           │
 └───────────────────────────────────────────────┘

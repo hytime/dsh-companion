@@ -65,7 +65,7 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
 
   // ---- 事件提醒 ----
   const [reminderEnabled, setReminderEnabled] = React.useState(true);
-  const [reminderIntervalMin, setReminderIntervalMin] = React.useState(60);
+  const [reminderIntervalMin, setReminderIntervalMin] = React.useState(1);
   const [reminderError, setReminderError] = React.useState('');
   const [reminderSaved, setReminderSaved] = React.useState(false);
   const [reminderPending, setReminderPending] = React.useState(false);
@@ -202,7 +202,7 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
       const result = await remote.setConfig({
         reminderEnabled,
         reminderIntervalMin:
-          Number.isFinite(interval) && interval > 0 ? interval : config?.reminderIntervalMin ?? 60,
+          Number.isFinite(interval) && interval > 0 ? interval : config?.reminderIntervalMin ?? 1,
       });
       if (result.ok && result.value.ok) setReminderSaved(true);
       else setReminderError(result.ok ? result.value.error ?? '保存失败' : result.error.message);
