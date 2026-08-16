@@ -23,6 +23,7 @@ import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { Context } from '@deepseek-ai/cordis';
 import { REMOTE_PACKAGE, REMOTE_SERVICE } from '../contracts/remote-descriptors';
 import { inferFromAgentIdle, inferFromToolResult, inferFromToolStart, type StatusUpdate } from './status-inference';
+import { checkPrereqs, installMissing } from './prereq-self-heal';
 
 /**
  * DSH Host 工具/Agent 事件的局部类型契约（对齐 harness `packages/core/tools`
@@ -262,6 +263,32 @@ class CompanionRemote extends TypertRemoteService {
 }
 
 export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}) {
+  // 前置自愈（hyc/技能检查 + 缺失自动安装）：整体 fire-and-forget，不阻塞 apply。
+  // ① 异步快速检查（checkPrereqs 返回 Promise）；② 全部就绪打日志，
+  // 有缺失则 void installMissing(...).then(...) 异步安装。
+  void checkPrereqs({})
+    .then((prereq) => {
+      if (prereq.hyc === 'ok' && prereq.skills === 'ok') {
+        console.log('[dsh-companion] 前置就绪(hyc ✓, skills ✓)');
+        return;
+      }
+      const missing: Array<'hyc' | 'skills'> = [];
+      if (prereq.hyc !== 'ok') missing.push('hyc');
+      if (prereq.skills !== 'ok') missing.push('skills');
+      console.log(`[dsh-companion] 检测到前置缺失(${missing.join(', ')}),自动安装中...`);
+      return installMissing({ missing }).then((result) => {
+        if (result.ok) console.log('[dsh-companion] 前置安装完成(hyc ✓, skills ✓)');
+        else
+          console.warn(
+            `[dsh-companion] 前置安装失败(${result.failures.join(', ')}),请手动运行:hy-companion-check 或 npm i -g @hytime/hyc`,
+          );
+      });
+    })
+    .catch((error) => {
+      // 自检本身失败不要阻塞插件启动。
+      console.warn(`[dsh-companion] 前置自检失败,跳过自愈:${error instanceof Error ? error.message : String(error)}`);
+    });
+
   // 注册 SRC Remote 服务（buddy / asset / status），Gateway 自动发现。
   const remote = new CompanionRemote(ctx);
 
