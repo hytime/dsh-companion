@@ -220,6 +220,11 @@ git commit -m "chore: 清理残留 tarball"  # 若仅有忽略产物则跳过
 
 **前置:** 用户批准执行发布(副作用操作,执行前再次确认)。
 
+- [ ] **步骤 0:构建 hyc darwin-arm64 二进制(发布前置,任务 6 确认缺口)**
+
+运行:`TRAVEL_NOTE_GO=/Volumes/hydisk/vsProject/travel-note-go node scripts/build-binaries.mjs`
+预期:`packages/hyc-darwin-arm64/bin/hyc` 存在(可执行文件);`hyc-darwin-arm64` 无 pack script,发布时 `files: ["bin/"]` 直接包含二进制
+
 - [ ] **步骤 1:确认 npm 已登录**
 
 运行:`npm whoami --cache /tmp/npmcheck-cache`
