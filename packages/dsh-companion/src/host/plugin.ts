@@ -4,6 +4,10 @@
  * 通过 DSH Typert Gateway 提供正式 Client→Host RPC：
  * - travelNoteCompanion.buddy() —— 最新 buddy 消息 + 旅伴显示名称
  * - travelNoteCompanion.asset({ frame }) —— 鲸鱼娘表情帧 → { url }（静态路由）
+ * - travelNoteCompanion.authStatus/login/register/logout —— 认证（hyc CLI）
+ * - travelNoteCompanion.getConfig/setConfig —— 插件配置读写（settings-store）
+ * - travelNoteCompanion.listSchedules/enableSchedule/disableSchedule/deleteSchedule —— 定时陪伴（hyc CLI）
+ *   （后三组共 10 个方法由 settings-rpc 的 handler 表组装，@Remote 仅做参数适配与透传）
  *
  * Remote 走 SRC 弱解析路径：`CompanionRemote extends TypertRemoteService` 用
  * `@Remote` 标记公开方法，Gateway 经 `remoteMethods(service)` + `typertRemote`
@@ -24,6 +28,16 @@ import type { Context } from '@deepseek-ai/cordis';
 import { REMOTE_PACKAGE, REMOTE_SERVICE } from '../contracts/remote-descriptors';
 import { inferFromAgentIdle, inferFromToolResult, inferFromToolStart, type StatusUpdate } from './status-inference';
 import { runSelfHeal } from './prereq-self-heal';
+import { readSettings, writeSettings, type CompanionSettings } from './settings-store';
+import {
+  checkAuthStatus,
+  listSchedules,
+  loginWithCredentials,
+  logout,
+  registerWithCredentials,
+  scheduleAction,
+} from './companion-commands';
+import { createSettingsHandlers } from './settings-rpc';
 
 /**
  * DSH Host 工具/Agent 事件的局部类型契约（对齐 harness `packages/core/tools`
@@ -91,6 +105,19 @@ interface SseClient {
 
 class CompanionRemote extends TypertRemoteService {
   private currentStatus: StatusUpdate = { status: 'idle' };
+
+  /** companion.* 配置 RPC handler 表(注入真实 store/commands,方法与 @Remote 同名)。 */
+  private readonly settingsHandlers = createSettingsHandlers({
+    store: { readSettings, writeSettings },
+    commands: {
+      checkAuthStatus,
+      loginWithCredentials,
+      registerWithCredentials,
+      logout,
+      listSchedules,
+      scheduleAction,
+    },
+  });
 
   constructor(ctx: Context) {
     super(ctx, REMOTE_SERVICE);
@@ -259,6 +286,68 @@ class CompanionRemote extends TypertRemoteService {
   async asset(frame: string): Promise<{ url: string } | null> {
     const name = FRAME_NAMES.includes(frame as (typeof FRAME_NAMES)[number]) ? frame : 'idle';
     return { url: `/plugins/${REMOTE_PACKAGE}/deepseek-girl-phaser/frames/${name}.png` };
+  }
+
+  // ---- companion.* 配置 RPC(settings-rpc handler 表,Client 配置页调用) ----
+
+  /** 认证状态探测(hyc personality get)。 */
+  @Remote
+  async authStatus(): Promise<ReturnType<typeof this.settingsHandlers.authStatus>> {
+    return this.settingsHandlers.authStatus();
+  }
+
+  /** 页面内登录(script 伪终端喂入账号密码)。 */
+  @Remote
+  async login(username: string, password: string): Promise<ReturnType<typeof this.settingsHandlers.login>> {
+    return this.settingsHandlers.login({ username, password });
+  }
+
+  /** 页面内注册(script 伪终端,喂入账号/密码/确认密码)。 */
+  @Remote
+  async register(username: string, password: string): Promise<ReturnType<typeof this.settingsHandlers.register>> {
+    return this.settingsHandlers.register({ username, password });
+  }
+
+  /** 登出(hyc logout)。 */
+  @Remote
+  async logout(): Promise<ReturnType<typeof this.settingsHandlers.logout>> {
+    return this.settingsHandlers.logout();
+  }
+
+  /** 读取插件配置(~/.hy-companion/config.json)。 */
+  @Remote
+  async getConfig(): Promise<ReturnType<typeof this.settingsHandlers.getConfig>> {
+    return this.settingsHandlers.getConfig();
+  }
+
+  /** 保存插件配置(白名单深合并,只写 6 个已知字段)。 */
+  @Remote
+  async setConfig(partial: Partial<CompanionSettings>): Promise<ReturnType<typeof this.settingsHandlers.setConfig>> {
+    return this.settingsHandlers.setConfig(partial);
+  }
+
+  /** 列出定时陪伴事件(hyc schedule list)。 */
+  @Remote
+  async listSchedules(): Promise<ReturnType<typeof this.settingsHandlers.listSchedules>> {
+    return this.settingsHandlers.listSchedules();
+  }
+
+  /** 启用定时事件(hyc schedule enable --id)。 */
+  @Remote
+  async enableSchedule(id: string): Promise<ReturnType<typeof this.settingsHandlers.enableSchedule>> {
+    return this.settingsHandlers.enableSchedule({ id });
+  }
+
+  /** 停用定时事件(hyc schedule disable --id)。 */
+  @Remote
+  async disableSchedule(id: string): Promise<ReturnType<typeof this.settingsHandlers.disableSchedule>> {
+    return this.settingsHandlers.disableSchedule({ id });
+  }
+
+  /** 删除定时事件(hyc schedule delete --id)。 */
+  @Remote
+  async deleteSchedule(id: string): Promise<ReturnType<typeof this.settingsHandlers.deleteSchedule>> {
+    return this.settingsHandlers.deleteSchedule({ id });
   }
 }
 
