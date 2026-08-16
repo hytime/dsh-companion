@@ -28,7 +28,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import { REMOTE_PACKAGE, REMOTE_SERVICE } from '../contracts/remote-descriptors';
 import { inferFromAgentIdle, inferFromToolResult, inferFromToolStart, type StatusUpdate } from './status-inference';
 import { runSelfHeal } from './prereq-self-heal';
-import { readSettings, writeSettings, type CompanionSettings } from './settings-store';
+import { readSettings, writeSettings, type CompanionSettings, type WriteResult } from './settings-store';
 import {
   checkAuthStatus,
   listSchedules,
@@ -36,8 +36,10 @@ import {
   logout,
   registerWithCredentials,
   scheduleAction,
+  type CommandResult,
+  type ScheduleListResult,
 } from './companion-commands';
-import { createSettingsHandlers } from './settings-rpc';
+import { createSettingsHandlers, type AuthStatusResult, type GetConfigResult } from './settings-rpc';
 
 /**
  * DSH Host 工具/Agent 事件的局部类型契约（对齐 harness `packages/core/tools`
@@ -292,61 +294,61 @@ class CompanionRemote extends TypertRemoteService {
 
   /** 认证状态探测(hyc personality get)。 */
   @Remote
-  async authStatus(): Promise<ReturnType<typeof this.settingsHandlers.authStatus>> {
+  async authStatus(): Promise<AuthStatusResult> {
     return this.settingsHandlers.authStatus();
   }
 
   /** 页面内登录(script 伪终端喂入账号密码)。 */
   @Remote
-  async login(username: string, password: string): Promise<ReturnType<typeof this.settingsHandlers.login>> {
+  async login(username: string, password: string): Promise<CommandResult> {
     return this.settingsHandlers.login({ username, password });
   }
 
   /** 页面内注册(script 伪终端,喂入账号/密码/确认密码)。 */
   @Remote
-  async register(username: string, password: string): Promise<ReturnType<typeof this.settingsHandlers.register>> {
+  async register(username: string, password: string): Promise<CommandResult> {
     return this.settingsHandlers.register({ username, password });
   }
 
   /** 登出(hyc logout)。 */
   @Remote
-  async logout(): Promise<ReturnType<typeof this.settingsHandlers.logout>> {
+  async logout(): Promise<CommandResult> {
     return this.settingsHandlers.logout();
   }
 
   /** 读取插件配置(~/.hy-companion/config.json)。 */
   @Remote
-  async getConfig(): Promise<ReturnType<typeof this.settingsHandlers.getConfig>> {
+  async getConfig(): Promise<GetConfigResult> {
     return this.settingsHandlers.getConfig();
   }
 
   /** 保存插件配置(白名单深合并,只写 6 个已知字段)。 */
   @Remote
-  async setConfig(partial: Partial<CompanionSettings>): Promise<ReturnType<typeof this.settingsHandlers.setConfig>> {
+  async setConfig(partial: Partial<CompanionSettings>): Promise<WriteResult> {
     return this.settingsHandlers.setConfig(partial);
   }
 
   /** 列出定时陪伴事件(hyc schedule list)。 */
   @Remote
-  async listSchedules(): Promise<ReturnType<typeof this.settingsHandlers.listSchedules>> {
+  async listSchedules(): Promise<ScheduleListResult> {
     return this.settingsHandlers.listSchedules();
   }
 
   /** 启用定时事件(hyc schedule enable --id)。 */
   @Remote
-  async enableSchedule(id: string): Promise<ReturnType<typeof this.settingsHandlers.enableSchedule>> {
+  async enableSchedule(id: string): Promise<CommandResult> {
     return this.settingsHandlers.enableSchedule({ id });
   }
 
   /** 停用定时事件(hyc schedule disable --id)。 */
   @Remote
-  async disableSchedule(id: string): Promise<ReturnType<typeof this.settingsHandlers.disableSchedule>> {
+  async disableSchedule(id: string): Promise<CommandResult> {
     return this.settingsHandlers.disableSchedule({ id });
   }
 
   /** 删除定时事件(hyc schedule delete --id)。 */
   @Remote
-  async deleteSchedule(id: string): Promise<ReturnType<typeof this.settingsHandlers.deleteSchedule>> {
+  async deleteSchedule(id: string): Promise<CommandResult> {
     return this.settingsHandlers.deleteSchedule({ id });
   }
 }
@@ -356,7 +358,9 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
   // runSelfHeal，此处仅 fire-and-forget（void），不阻塞 apply。
   void runSelfHeal({});
 
-  // 注册 SRC Remote 服务（buddy / asset / status），Gateway 自动发现。
+  // 注册 SRC Remote 服务（共 14 个 @Remote：status / buddy / latestReply / asset +
+  // authStatus / login / register / logout / getConfig / setConfig / listSchedules /
+  // enableSchedule / disableSchedule / deleteSchedule），Gateway 自动发现。
   const remote = new CompanionRemote(ctx);
 
   // 状态/数据 SSE 推送：Client 用 EventSource 订阅（命名事件 status/buddy/reply），
