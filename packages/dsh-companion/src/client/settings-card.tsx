@@ -50,6 +50,7 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [authError, setAuthError] = React.useState('');
+  const [authPending, setAuthPending] = React.useState(false);
 
   // ---- 基本配置 ----
   const [companionName, setCompanionName] = React.useState('');
@@ -58,12 +59,16 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   const [showBubble, setShowBubble] = React.useState(true);
   const [configError, setConfigError] = React.useState('');
   const [configSaved, setConfigSaved] = React.useState(false);
+  const [configPending, setConfigPending] = React.useState(false);
 
   // ---- 事件提醒 ----
   const [reminderEnabled, setReminderEnabled] = React.useState(true);
   const [reminderIntervalMin, setReminderIntervalMin] = React.useState(60);
   const [reminderError, setReminderError] = React.useState('');
   const [reminderSaved, setReminderSaved] = React.useState(false);
+  const [reminderPending, setReminderPending] = React.useState(false);
+  /** 正在执行动作的事件 id(null 表示无动作进行中),pending 期间该行按钮禁用。 */
+  const [scheduleActionId, setScheduleActionId] = React.useState<string | null>(null);
 
   const refreshAuthStatus = React.useCallback(async (): Promise<void> => {
     const result = await remote.authStatus();
@@ -114,6 +119,7 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   // ---- 账号：前端校验 + 提交 ----
   const onSubmitAuth = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
+    if (authPending) return;
     if (username.trim() === '' || password === '') {
       setAuthError('请输入账号和密码');
       return;
@@ -129,17 +135,22 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
       }
     }
     setAuthError('');
-    const result =
-      authMode === 'login'
-        ? await remote.login(username.trim(), password)
-        : await remote.register(username.trim(), password);
-    if (result.ok && result.value.ok) {
-      setUsername('');
-      setPassword('');
-      setConfirmPassword('');
-      await refreshAuthStatus();
-    } else {
-      setAuthError(result.ok ? result.value.error ?? '操作失败' : result.error.message);
+    setAuthPending(true);
+    try {
+      const result =
+        authMode === 'login'
+          ? await remote.login(username.trim(), password)
+          : await remote.register(username.trim(), password);
+      if (result.ok && result.value.ok) {
+        setUsername('');
+        setPassword('');
+        setConfirmPassword('');
+        await refreshAuthStatus();
+      } else {
+        setAuthError(result.ok ? result.value.error ?? '操作失败' : result.error.message);
+      }
+    } finally {
+      setAuthPending(false);
     }
   };
 
@@ -154,44 +165,62 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
 
   // ---- 基本配置：保存 ----
   const onSaveConfig = async (): Promise<void> => {
+    if (configPending) return;
     setConfigSaved(false);
     setConfigError('');
-    const result = await remote.setConfig({
-      companionName: companionName.trim() || config?.companionName || DEFAULT_NAME,
-      userCallName: userCallName.trim() || config?.userCallName || DEFAULT_CALL_NAME,
-      showAffection,
-      showBubble,
-    });
-    if (result.ok && result.value.ok) setConfigSaved(true);
-    else setConfigError(result.ok ? result.value.error ?? '保存失败' : result.error.message);
+    setConfigPending(true);
+    try {
+      const result = await remote.setConfig({
+        companionName: companionName.trim() || config?.companionName || DEFAULT_NAME,
+        userCallName: userCallName.trim() || config?.userCallName || DEFAULT_CALL_NAME,
+        showAffection,
+        showBubble,
+      });
+      if (result.ok && result.value.ok) setConfigSaved(true);
+      else setConfigError(result.ok ? result.value.error ?? '保存失败' : result.error.message);
+    } finally {
+      setConfigPending(false);
+    }
   };
 
   // ---- 事件提醒：保存 + 事件动作 ----
   const onSaveReminder = async (): Promise<void> => {
+    if (reminderPending) return;
     setReminderSaved(false);
     setReminderError('');
-    const interval = Number(reminderIntervalMin);
-    const result = await remote.setConfig({
-      reminderEnabled,
-      reminderIntervalMin:
-        Number.isFinite(interval) && interval > 0 ? interval : config?.reminderIntervalMin ?? 60,
-    });
-    if (result.ok && result.value.ok) setReminderSaved(true);
-    else setReminderError(result.ok ? result.value.error ?? '保存失败' : result.error.message);
+    setReminderPending(true);
+    try {
+      const interval = Number(reminderIntervalMin);
+      const result = await remote.setConfig({
+        reminderEnabled,
+        reminderIntervalMin:
+          Number.isFinite(interval) && interval > 0 ? interval : config?.reminderIntervalMin ?? 60,
+      });
+      if (result.ok && result.value.ok) setReminderSaved(true);
+      else setReminderError(result.ok ? result.value.error ?? '保存失败' : result.error.message);
+    } finally {
+      setReminderPending(false);
+    }
   };
 
   const onScheduleAction = async (item: ScheduleItem, action: 'enable' | 'disable' | 'delete'): Promise<void> => {
+    if (scheduleActionId !== null) return;
     setReminderError('');
-    const result =
-      action === 'enable'
-        ? await remote.enableSchedule(item.id)
-        : action === 'disable'
-          ? await remote.disableSchedule(item.id)
-          : await remote.deleteSchedule(item.id);
-    if (result.ok && result.value.ok) {
-      await refreshSchedules();
-    } else {
-      setReminderError(result.ok ? result.value.error ?? '操作失败' : result.error.message);
+    setScheduleActionId(item.id);
+    try {
+      const result =
+        action === 'enable'
+          ? await remote.enableSchedule(item.id)
+          : action === 'disable'
+            ? await remote.disableSchedule(item.id)
+            : await remote.deleteSchedule(item.id);
+      if (result.ok && result.value.ok) {
+        await refreshSchedules();
+      } else {
+        setReminderError(result.ok ? result.value.error ?? '操作失败' : result.error.message);
+      }
+    } finally {
+      setScheduleActionId(null);
     }
   };
 
@@ -270,8 +299,12 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
               </label>
             )}
             <div className={styles['dsh-companion-settings-card__actions']}>
-              <button type="submit" className={styles['dsh-companion-settings-card__submit']}>
-                {authMode === 'login' ? '登录' : '注册'}
+              <button
+                type="submit"
+                className={styles['dsh-companion-settings-card__submit']}
+                disabled={authPending}
+              >
+                {authPending ? '提交中…' : authMode === 'login' ? '登录' : '注册'}
               </button>
             </div>
             {authError !== '' && (
@@ -314,8 +347,13 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
           <span className={styles['dsh-companion-settings-card__label']}>显示气泡</span>
         </label>
         <div className={styles['dsh-companion-settings-card__actions']}>
-          <button type="button" className={styles['dsh-companion-settings-card__submit']} onClick={() => void onSaveConfig()}>
-            保存配置
+          <button
+            type="button"
+            className={styles['dsh-companion-settings-card__submit']}
+            disabled={configPending}
+            onClick={() => void onSaveConfig()}
+          >
+            {configPending ? '提交中…' : '保存配置'}
           </button>
         </div>
         {configError !== '' && (
@@ -348,8 +386,13 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
           />
         </label>
         <div className={styles['dsh-companion-settings-card__actions']}>
-          <button type="button" className={styles['dsh-companion-settings-card__submit']} onClick={() => void onSaveReminder()}>
-            保存提醒
+          <button
+            type="button"
+            className={styles['dsh-companion-settings-card__submit']}
+            disabled={reminderPending}
+            onClick={() => void onSaveReminder()}
+          >
+            {reminderPending ? '提交中…' : '保存提醒'}
           </button>
         </div>
         {reminderError !== '' && (
@@ -369,11 +412,16 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
                 <div className={styles['dsh-companion-settings-card__item-actions']}>
                   <button
                     type="button"
+                    disabled={scheduleActionId === item.id}
                     onClick={() => void onScheduleAction(item, item.enabled ? 'disable' : 'enable')}
                   >
                     {item.enabled ? '停用' : '启用'}
                   </button>
-                  <button type="button" onClick={() => void onScheduleAction(item, 'delete')}>
+                  <button
+                    type="button"
+                    disabled={scheduleActionId === item.id}
+                    onClick={() => void onScheduleAction(item, 'delete')}
+                  >
                     删除
                   </button>
                 </div>

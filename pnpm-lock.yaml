@@ -79,7 +79,7 @@ importers:
     optionalDependencies:
       '@hytime/hyc-darwin-arm64':
         specifier: 0.1.1
-        version: 0.1.1
+        version: link:../hyc-darwin-arm64
 
   packages/hyc-darwin-arm64: {}
 
@@ -402,11 +402,6 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
-
-  '@hytime/hyc-darwin-arm64@0.1.1':
-    resolution: {integrity: sha512-LnXgoknf6Grce3Jsf9WDsfXkhNxDjgfluqQfiaiWkopr5s21pBIcRPTvQHXThzcEAfOVoDr3bu3F10QEokB0tg==}
-    cpu: [arm64]
-    os: [darwin]
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -2147,9 +2142,6 @@ snapshots:
     optional: true
 
   '@esbuild/win32-x64@0.25.12':
-    optional: true
-
-  '@hytime/hyc-darwin-arm64@0.1.1':
     optional: true
 
   '@jridgewell/gen-mapping@0.3.13':

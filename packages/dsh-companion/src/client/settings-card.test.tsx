@@ -189,4 +189,80 @@ describe('SettingsCard', () => {
     await user.click(screen.getByRole('button', { name: '保存配置' }));
     expect(await screen.findByText('已保存')).toBeInTheDocument();
   });
+
+  it('提交中:登录提交 pending 期间按钮禁用并显示「提交中…」,双击不重复提交,完成后恢复', async () => {
+    const loginDeferred = createDeferred<Awaited<ReturnType<CompanionRemoteFace['login']>>>();
+    const remote = createRemote({
+      login: vi.fn<CompanionRemoteFace['login']>(() => loginDeferred.promise),
+    });
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByText('账号与密码');
+    await user.type(screen.getByLabelText('账号'), 'alice');
+    await user.type(screen.getByLabelText('密码'), 'correct-password');
+    const submit = screen.getByRole('button', { name: '登录' });
+    await user.click(submit);
+    // pending:按钮禁用 + 文案「提交中…」
+    const pendingBtn = screen.getByRole('button', { name: '提交中…' });
+    expect(pendingBtn).toBeDisabled();
+    // 双击(或重复点击)不触发第二次提交
+    await user.click(pendingBtn);
+    expect(remote.login).toHaveBeenCalledTimes(1);
+    // 提交完成后恢复可点
+    loginDeferred.resolve({ ok: true as const, value: { ok: true as const } });
+    await waitFor(() => expect(screen.getByRole('button', { name: '登录' })).toBeEnabled());
+  });
+
+  it('提交中:保存配置 pending 期间按钮禁用并显示「提交中…」,完成后恢复', async () => {
+    const setConfigDeferred = createDeferred<Awaited<ReturnType<CompanionRemoteFace['setConfig']>>>();
+    const remote = createRemote({
+      setConfig: vi.fn<CompanionRemoteFace['setConfig']>(() => setConfigDeferred.promise),
+    });
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByText('基本配置');
+    const saveBtn = screen.getByRole('button', { name: '保存配置' });
+    await user.click(saveBtn);
+    const pendingBtn = screen.getByRole('button', { name: '提交中…' });
+    expect(pendingBtn).toBeDisabled();
+    setConfigDeferred.resolve({ ok: true as const, value: { ok: true as const } });
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存配置' })).toBeEnabled());
+  });
+
+  it('提交中:保存提醒与事件动作 pending 期间对应按钮禁用,其它事件行不受影响', async () => {
+    const setConfigDeferred = createDeferred<Awaited<ReturnType<CompanionRemoteFace['setConfig']>>>();
+    const disableDeferred = createDeferred<Awaited<ReturnType<CompanionRemoteFace['disableSchedule']>>>();
+    const remote = createRemote({
+      setConfig: vi.fn<CompanionRemoteFace['setConfig']>(() => setConfigDeferred.promise),
+      disableSchedule: vi.fn<CompanionRemoteFace['disableSchedule']>(() => disableDeferred.promise),
+      listSchedules: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, items: SCHEDULES } })),
+    });
+    const user = userEvent.setup();
+    renderCard(remote);
+    const item1 = await screen.findByTestId('schedule-item-s1');
+    // 保存提醒 pending
+    await user.click(screen.getByRole('button', { name: '保存提醒' }));
+    expect(screen.getByRole('button', { name: '提交中…' })).toBeDisabled();
+    setConfigDeferred.resolve({ ok: true as const, value: { ok: true as const } });
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存提醒' })).toBeEnabled());
+    // 事件动作 pending:该行两个按钮都禁用,其它行保持可用
+    await user.click(within(item1).getByRole('button', { name: '停用' }));
+    expect(within(item1).getByRole('button', { name: '停用' })).toBeDisabled();
+    expect(within(item1).getByRole('button', { name: '删除' })).toBeDisabled();
+    expect(within(screen.getByTestId('schedule-item-s2')).getByRole('button', { name: '启用' })).toBeEnabled();
+    // 完成后恢复
+    disableDeferred.resolve({ ok: true as const, value: { ok: true as const } });
+    await waitFor(() =>
+      expect(within(screen.getByTestId('schedule-item-s1')).getByRole('button', { name: '停用' })).toBeEnabled(),
+    );
+  });
 });
+
+/** 手动控制的延迟 Promise:resolve 前一直处于 pending,用于模拟慢提交。 */
+function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
