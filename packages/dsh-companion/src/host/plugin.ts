@@ -9,6 +9,11 @@
  * - travelNoteCompanion.listSchedules/enableSchedule/disableSchedule/deleteSchedule —— 定时陪伴（hyc CLI）
  *   （后三组共 10 个方法由 settings-rpc 的 handler 表组装，@Remote 仅做参数适配与透传）
  *
+ * 配置消费：apply 启动时 readSettings 注入 CompanionRemote；buddy() 用配置覆盖
+ * 线上人格的名称/称呼（空值回退线上）、showAffection=false 时抑制好感度字段；
+ * latestReply()/回复轮询在 showBubble=false 时置空；buddy 30s 轮询在
+ * reminderEnabled=false 时跳过；setConfig 成功后 host 重读配置并推送新状态。
+ *
  * Remote 走 SRC 弱解析路径：`CompanionRemote extends TypertRemoteService` 用
  * `@Remote` 标记公开方法，Gateway 经 `remoteMethods(service)` + `typertRemote`
  * 绑定发现端点（无需 host 侧 `typert.remotes.register` 贡献；那是 Client `$mount`
@@ -28,7 +33,13 @@ import type { Context } from '@deepseek-ai/cordis';
 import { REMOTE_PACKAGE, REMOTE_SERVICE } from '../contracts/remote-descriptors';
 import { inferFromAgentIdle, inferFromToolResult, inferFromToolStart, type StatusUpdate } from './status-inference';
 import { runSelfHeal } from './prereq-self-heal';
-import { readSettings, writeSettings, type CompanionSettings, type WriteResult } from './settings-store';
+import {
+  DEFAULT_SETTINGS,
+  readSettings,
+  writeSettings,
+  type CompanionSettings,
+  type WriteResult,
+} from './settings-store';
 import {
   checkAuthStatus,
   listSchedules,
@@ -39,7 +50,13 @@ import {
   type CommandResult,
   type ScheduleListResult,
 } from './companion-commands';
-import { createSettingsHandlers, type AuthStatusResult, type GetConfigResult } from './settings-rpc';
+import {
+  createSettingsHandlers,
+  type AuthStatusResult,
+  type GetConfigResult,
+  type SettingsRpcDeps,
+  type SettingsRpcHandlers,
+} from './settings-rpc';
 
 /**
  * DSH Host 工具/Agent 事件的局部类型契约（对齐 harness `packages/core/tools`
@@ -105,24 +122,98 @@ interface SseClient {
   res: { write(chunk: string): void };
 }
 
-class CompanionRemote extends TypertRemoteService {
+/** buddy 载荷的旅伴信息/好感度部分（hyc personality get + affection 采集结果）。 */
+export interface BuddyBase {
+  companionName: string;
+  userCallName: string;
+  affectionScore: number;
+  intimacyScore: number;
+  trustScore: number;
+  engagementScore: number;
+  talkativenessFactor: number;
+  proactiveProbabilityFactor: number;
+  cooldownFactor: number;
+  lastEvaluatedDate: string;
+  lastAnnouncedDate: string;
+}
+
+/** buddy() 完整返回：BuddyBase + 最新 buddy 消息。 */
+export interface BuddyResult extends BuddyBase {
+  message: string;
+  title: string;
+  dueAt: string;
+}
+
+/**
+ * 配置消费（纯函数）：把 CompanionSettings 应用到线上采集的 buddy 基础载荷。
+ * - companionName/userCallName：配置优先，空值回退线上值（缺省非空，正常恒为配置值）
+ * - showAffection=false：9 个好感度字段全部置空（widget 好感度条/面板据此隐藏）
+ */
+export function applySettingsToBuddy(base: BuddyBase, settings: CompanionSettings): BuddyBase {
+  const showAffection = settings.showAffection;
+  return {
+    companionName: settings.companionName !== '' ? settings.companionName : base.companionName,
+    userCallName: settings.userCallName !== '' ? settings.userCallName : base.userCallName,
+    affectionScore: showAffection ? base.affectionScore : 0,
+    intimacyScore: showAffection ? base.intimacyScore : 0,
+    trustScore: showAffection ? base.trustScore : 0,
+    engagementScore: showAffection ? base.engagementScore : 0,
+    talkativenessFactor: showAffection ? base.talkativenessFactor : 0,
+    proactiveProbabilityFactor: showAffection ? base.proactiveProbabilityFactor : 0,
+    cooldownFactor: showAffection ? base.cooldownFactor : 0,
+    lastEvaluatedDate: showAffection ? base.lastEvaluatedDate : '',
+    lastAnnouncedDate: showAffection ? base.lastAnnouncedDate : '',
+  };
+}
+
+/** 周期推送通道开关：reminderEnabled=false 跳过 buddy 轮询；showBubble=false 跳过回复轮询。 */
+export function selectPushChannels(settings: CompanionSettings): { buddy: boolean; reply: boolean } {
+  return { buddy: settings.reminderEnabled, reply: settings.showBubble };
+}
+
+/** CompanionRemote 缺省依赖：真实 store + 真实命令（测试注入替身）。 */
+const DEFAULT_RPC_DEPS: SettingsRpcDeps = {
+  store: { readSettings, writeSettings },
+  commands: {
+    checkAuthStatus,
+    loginWithCredentials,
+    registerWithCredentials,
+    logout,
+    listSchedules,
+    scheduleAction,
+  },
+};
+
+export class CompanionRemote extends TypertRemoteService {
   private currentStatus: StatusUpdate = { status: 'idle' };
 
-  /** companion.* 配置 RPC handler 表(注入真实 store/commands,方法与 @Remote 同名)。 */
-  private readonly settingsHandlers = createSettingsHandlers({
-    store: { readSettings, writeSettings },
-    commands: {
-      checkAuthStatus,
-      loginWithCredentials,
-      registerWithCredentials,
-      logout,
-      listSchedules,
-      scheduleAction,
-    },
-  });
+  /** 当前生效配置（apply 启动 / setConfig 成功后重读注入）。 */
+  private settings: CompanionSettings = { ...DEFAULT_SETTINGS };
 
-  constructor(ctx: Context) {
+  /** setConfig 写入成功后的宿主回调（apply 注入：重读配置并推送新状态）。 */
+  private onConfigApplied?: () => void;
+
+  /** companion.* 配置 RPC handler 表(注入 store/commands,方法与 @Remote 同名)。 */
+  private readonly settingsHandlers: SettingsRpcHandlers;
+
+  constructor(ctx: Context, deps: SettingsRpcDeps = DEFAULT_RPC_DEPS) {
     super(ctx, REMOTE_SERVICE);
+    this.settingsHandlers = createSettingsHandlers(deps);
+  }
+
+  /** 注入配置快照（apply 启动读取 / setConfig 成功后重读）。 */
+  applySettings(settings: CompanionSettings): void {
+    this.settings = settings;
+  }
+
+  /** 当前生效配置快照（周期推送等按配置做通道决策）。 */
+  getSettings(): CompanionSettings {
+    return this.settings;
+  }
+
+  /** 注册 setConfig 成功回调（host 侧据此重读配置并推送新状态）。 */
+  setOnConfigApplied(callback: () => void): void {
+    this.onConfigApplied = callback;
   }
 
   setStatus(update: StatusUpdate): void {
@@ -139,42 +230,26 @@ class CompanionRemote extends TypertRemoteService {
     return this.currentStatus;
   }
 
-  /** 最新 buddy 消息 + 旅伴显示名称 + 对用户的称呼 + 好感度全量（hyc personality get / affection）。 */
+  /** 最新 buddy 消息 + 旅伴显示名称 + 对用户的称呼 + 好感度全量（hyc personality get / affection）。
+   *  名称/称呼经配置覆盖（applySettingsToBuddy：配置优先，空值回退线上）；showAffection=false 时好感度置空。 */
   @Remote
-  async buddy(): Promise<{
-    message: string;
-    title: string;
-    dueAt: string;
-    companionName: string;
-    userCallName: string;
-    affectionScore: number;
-    intimacyScore: number;
-    trustScore: number;
-    engagementScore: number;
-    talkativenessFactor: number;
-    proactiveProbabilityFactor: number;
-    cooldownFactor: number;
-    lastEvaluatedDate: string;
-    lastAnnouncedDate: string;
-  }> {
+  async buddy(): Promise<BuddyResult> {
     const shell = this.ctx.get('shell') as unknown as ShellService | undefined;
+    const emptyBase: BuddyBase = {
+      companionName: '',
+      userCallName: '',
+      affectionScore: 0,
+      intimacyScore: 0,
+      trustScore: 0,
+      engagementScore: 0,
+      talkativenessFactor: 0,
+      proactiveProbabilityFactor: 0,
+      cooldownFactor: 0,
+      lastEvaluatedDate: '',
+      lastAnnouncedDate: '',
+    };
     if (shell === undefined) {
-      return {
-        message: '',
-        title: '',
-        dueAt: '',
-        companionName: '旅伴',
-        userCallName: '',
-        affectionScore: 0,
-        intimacyScore: 0,
-        trustScore: 0,
-        engagementScore: 0,
-        talkativenessFactor: 0,
-        proactiveProbabilityFactor: 0,
-        cooldownFactor: 0,
-        lastEvaluatedDate: '',
-        lastAnnouncedDate: '',
-      };
+      return { message: '', title: '', dueAt: '', ...applySettingsToBuddy(emptyBase, this.settings) };
     }
     let companionName = '';
     let userCallName = '';
@@ -226,19 +301,22 @@ class CompanionRemote extends TypertRemoteService {
     } catch {
       // 好感度缺失时使用 0
     }
-    const base = {
-      companionName,
-      userCallName,
-      affectionScore,
-      intimacyScore,
-      trustScore,
-      engagementScore,
-      talkativenessFactor,
-      proactiveProbabilityFactor,
-      cooldownFactor,
-      lastEvaluatedDate,
-      lastAnnouncedDate,
-    };
+    const base = applySettingsToBuddy(
+      {
+        companionName,
+        userCallName,
+        affectionScore,
+        intimacyScore,
+        trustScore,
+        engagementScore,
+        talkativenessFactor,
+        proactiveProbabilityFactor,
+        cooldownFactor,
+        lastEvaluatedDate,
+        lastAnnouncedDate,
+      },
+      this.settings,
+    );
     try {
       const spec = shell.resolve({
         command: 'hyc buddy list --page-size 1',
@@ -266,9 +344,11 @@ class CompanionRemote extends TypertRemoteService {
     }
   }
 
-  /** 最近一次 hyc chat 回复（hy-companion-chat 技能落盘 ~/.hy-companion/state/last-reply.json）。 */
+  /** 最近一次 hyc chat 回复（hy-companion-chat 技能落盘 ~/.hy-companion/state/last-reply.json）。
+   *  showBubble=false 时置空（不读文件，直接返回 null）。 */
   @Remote
   async latestReply(): Promise<{ reply: string; emotion: string } | null> {
+    if (!this.settings.showBubble) return null;
     try {
       const file = join(homedir(), '.hy-companion', 'state', 'last-reply.json');
       const raw = await readFile(file, 'utf8');
@@ -322,10 +402,12 @@ class CompanionRemote extends TypertRemoteService {
     return this.settingsHandlers.getConfig();
   }
 
-  /** 保存插件配置(白名单深合并,只写 6 个已知字段)。 */
+  /** 保存插件配置(白名单深合并,只写 6 个已知字段)。写入成功后通知 host 重读并推送新状态。 */
   @Remote
   async setConfig(partial: Partial<CompanionSettings>): Promise<WriteResult> {
-    return this.settingsHandlers.setConfig(partial);
+    const result = await this.settingsHandlers.setConfig(partial);
+    if (result.ok) this.onConfigApplied?.();
+    return result;
   }
 
   /** 列出定时陪伴事件(hyc schedule list)。 */
@@ -363,6 +445,10 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
   // enableSchedule / disableSchedule / deleteSchedule），Gateway 自动发现。
   const remote = new CompanionRemote(ctx);
 
+  // 配置消费：apply 启动时读取配置并注入（fire-and-forget，读取失败回缺省，
+  // 与 runSelfHeal 同一模式，不阻塞 apply）。setConfig 成功后经 onConfigApplied 重读。
+  void readSettings({}).then((settings) => remote.applySettings(settings));
+
   // 状态/数据 SSE 推送：Client 用 EventSource 订阅（命名事件 status/buddy/reply），
   // 替代三个 RPC 轮询。broadcast 向所有连接写一帧 SSE。
   const sseClients = new Set<SseClient>();
@@ -381,8 +467,10 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
     }
   };
   // 最近回复周期推送（5s）：last-reply.json 内容变化才广播。
+  // showBubble=false 时整条通道抑制（SSE 连接建立时的初次推送同样不广播）。
   let lastReplyRaw = '';
   const pushReply = async (): Promise<void> => {
+    if (!remote.getSettings().showBubble) return;
     try {
       const file = join(homedir(), '.hy-companion', 'state', 'last-reply.json');
       const raw = await readFile(file, 'utf8');
@@ -400,10 +488,24 @@ export function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}
     }
   };
 
-  // 周期任务随插件生命周期清理。
+  // 配置变化（Client setConfig 成功）→ host 主动重读配置并推送新状态：
+  // 名称/称呼/好感度开关即时生效，无需重启插件。
+  remote.setOnConfigApplied(() => {
+    void readSettings({}).then((settings) => {
+      remote.applySettings(settings);
+      void pushBuddy();
+    });
+  });
+
+  // 周期任务随插件生命周期清理。通道按当前配置逐 tick 决策：
+  // reminderEnabled=false 跳过 buddy 30s 轮询；showBubble=false 跳过回复 5s 轮询。
   ctx.effect(() => {
-    const buddyTimer = setInterval(() => void pushBuddy(), 30_000);
-    const replyTimer = setInterval(() => void pushReply(), 5_000);
+    const buddyTimer = setInterval(() => {
+      if (selectPushChannels(remote.getSettings()).buddy) void pushBuddy();
+    }, 30_000);
+    const replyTimer = setInterval(() => {
+      if (selectPushChannels(remote.getSettings()).reply) void pushReply();
+    }, 5_000);
     return () => {
       clearInterval(buddyTimer);
       clearInterval(replyTimer);
