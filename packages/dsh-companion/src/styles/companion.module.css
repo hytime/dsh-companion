@@ -190,7 +190,7 @@
 .dsh-companion-whale__toast {
   position: absolute;
   left: 0;
-  max-width: min(380px, calc(100vw - 32px));
+  max-width: min(480px, calc(100vw - 32px));
   background: #ffffff;
   border: 1px solid #f2d3d8;
   border-radius: 10px;
@@ -225,7 +225,7 @@
 .dsh-companion-whale__speech {
   position: absolute;
   left: 0;
-  max-width: min(380px, calc(100vw - 32px));
+  max-width: min(480px, calc(100vw - 32px));
   background: #ffffff;
   border: 1px solid #f2d3d8;
   border-radius: 14px;

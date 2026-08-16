@@ -153,6 +153,49 @@ describe('WhaleFloatingWidget', () => {
     expect(Number.parseFloat(container.style.left)).toBeCloseTo(saved.left);
     expect(Number.parseFloat(container.style.top)).toBeCloseTo(saved.top);
   });
+
+  it('回复气泡默认从人物左缘向右展开(left=0)', async () => {
+    // 人物放左侧(20,300),气泡 300px:20+300<1016 → 右展开 left=0
+    window.localStorage.setItem('dsh-companion.whale.pos', JSON.stringify({ left: 20, top: 300 }));
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 300,
+      height: 60,
+      top: 0,
+      left: 0,
+      right: 300,
+      bottom: 60,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+    render(<WhaleFloatingWidget status="idle" latestReply="默认向右展开的回复" />);
+    const text = await screen.findByText(/默认向右展开的回复/, undefined, { timeout: 3000 });
+    const bubble = text.parentElement as HTMLElement;
+    expect(bubble.style.left).toBe('0px');
+    rect.mockRestore();
+  });
+
+  it('人物贴右缘时回复气泡向左展开(宽度超过人物)', async () => {
+    window.localStorage.clear();
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 480,
+      height: 60,
+      top: 0,
+      left: 0,
+      right: 480,
+      bottom: 60,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+    render(<WhaleFloatingWidget status="idle" latestReply="右侧空间不足，气泡向左展开" />);
+    const text = await screen.findByText(/右侧空间不足，气泡向左展开/, undefined, { timeout: 3000 });
+    const bubble = text.parentElement as HTMLElement;
+    // 默认位置 left=878（视口 1024 - 人物 130 - 边距 16），气泡宽 480：
+    // 878+480 > 1024-8 → 向左展开 left = 130-480 = -350
+    expect(bubble.style.left).toBe('-350px');
+    rect.mockRestore();
+  });
 });
 
 describe('companion.css 约束', () => {

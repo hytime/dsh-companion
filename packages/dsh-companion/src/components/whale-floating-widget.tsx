@@ -161,8 +161,11 @@ export function WhaleFloatingWidget({
     left: 0,
     bottom: FIGURE_H + POPOVER_GAP,
   }));
+  const [bubbleLeft, setBubbleLeft] = useState(0);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const speechRef = useRef<HTMLDivElement | null>(null);
+  const toastRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const posRef = useRef(position);
   const skipClickRef = useRef(false);
@@ -203,6 +206,25 @@ export function WhaleFloatingWidget({
     const timer = setTimeout(() => setReplyToast(null), TOAST_MS + 2000);
     return () => clearTimeout(timer);
   }, [replyToast]);
+
+  /** 回复/提醒气泡边界自适应：默认与人物左缘对齐向右展开；
+   *  右侧空间不足时向左展开（右缘贴人物右缘），水平防溢出（渲染后按实测校正）。 */
+  useLayoutEffect(() => {
+    const node = replyToast !== null ? speechRef.current : toast !== null ? toastRef.current : null;
+    if (node === null) return;
+    const rect = node.getBoundingClientRect();
+    const bubbleW = rect.width > 0 ? rect.width : 280;
+    const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    let left = 0;
+    if (position.left + left + bubbleW > viewportW - POPOVER_EDGE) {
+      left = FIGURE_W - bubbleW;
+    }
+    left = Math.max(
+      POPOVER_EDGE - position.left,
+      Math.min(left, viewportW - bubbleW - POPOVER_EDGE - position.left),
+    );
+    setBubbleLeft(left);
+  }, [replyToast, toast, position]);
 
   const togglePeek = (): void => {
     if (peek !== null) {
@@ -396,8 +418,9 @@ export function WhaleFloatingWidget({
       ) : null}
       {replyToast !== null ? (
         <div
+          ref={speechRef}
           className={styles['dsh-companion-whale__speech']}
-          style={{ bottom: toastBottom }}
+          style={{ left: bubbleLeft, bottom: toastBottom }}
           onClick={(event) => event.stopPropagation()}
         >
           <div className={styles['dsh-companion-whale__speech-name']}>{companionName}</div>
@@ -417,8 +440,9 @@ export function WhaleFloatingWidget({
       ) : null}
       {toast !== null ? (
         <div
+          ref={toastRef}
           className={styles['dsh-companion-whale__toast']}
-          style={{ bottom: FIGURE_H + POPOVER_GAP + 4 }}
+          style={{ left: bubbleLeft, bottom: FIGURE_H + POPOVER_GAP + 4 }}
           onClick={(event) => event.stopPropagation()}
         >
           <div className={styles['dsh-companion-whale__toast-title']}>{toast.title}</div>
