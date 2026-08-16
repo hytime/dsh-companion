@@ -1,6 +1,6 @@
 node_modules/
 .pnpm-store/
-lib/
+packages/dsh-companion/lib/
 dist/
 *.tgz
 .DS_Store
