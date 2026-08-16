@@ -12,9 +12,11 @@ import { spawnSync } from 'node:child_process';
  *   账号密码；register 额外有一次「确认密码」提示，共喂三行。
  * - hyc schedule enable|disable|delete 通过 `--id <id>` flag 指定事件
  *   （位置参数会得到 "unknown command" 错误）。
- * - CLI 错误统一输出 JSON 信封 `{"error":"..."}` 到 stdout，且部分场景
- *   （schedule enable/disable/delete 的 server 错误）退出码仍为 0，
- *   因此成功判定 = 无 error 信封 && 退出码 0，错误一律原样透传。
+ * - CLI 错误统一输出 JSON 信封 `{"error":"..."}` 到 stdout。实测
+ *   （2026-08-16 线上 hyc 二进制）server 错误以退出码 0 + stdout 错误信封
+ *   返回（如 `hyc schedule enable --id <不存在的id>` 输出 error 信封但退出码
+ *   为 0），退出码不可靠，因此成功判定 = 无 error 信封 && 退出码 0，
+ *   不能只看退出码，错误一律原样透传。
  */
 
 export interface ScheduleItem {
@@ -122,14 +124,17 @@ function passthroughError(result: RunResult): string {
 }
 
 /**
- * 认证状态探测：`hyc personality get` 退出 0 → authenticated；
- * 非 0 退出、ENOENT 或任何错误 → unauthenticated（绝不抛出）。
+ * 认证状态探测：`hyc personality get` 成功 = 无 error 信封 && 退出码 0 → authenticated；
+ * 退出码非 0、stdout 含 error 信封、ENOENT 或任何错误 → unauthenticated（绝不抛出）。
+ * personality 的 server 错误同样以退出码 0 + stdout 错误信封返回（实测 2026-08-16），
+ * 因此成功判定不能只看退出码。
  */
 export async function checkAuthStatus(options: { run?: RunCmd } = {}): Promise<'authenticated' | 'unauthenticated'> {
   const run = options.run ?? defaultRun;
   const result = runOrCatch(run, 'hyc', ['personality', 'get']);
   if (result.error) return 'unauthenticated';
   if (result.status !== 0) return 'unauthenticated';
+  if (extractJsonError(result.stdout)) return 'unauthenticated';
   return 'authenticated';
 }
 

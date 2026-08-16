@@ -43,6 +43,11 @@ describe('checkAuthStatus', () => {
     await expect(checkAuthStatus({ run })).resolves.toBe('unauthenticated');
   });
 
+  it('退出 0 但输出 {"error":...} 信封(实测契约 2026-08-16:server 错误以退出码 0 + stdout 错误信封返回)→ unauthenticated', async () => {
+    const run = () => ({ status: 0, stdout: '{"error":"登录已过期，请重新执行 hyc login: 请先登录"}' });
+    await expect(checkAuthStatus({ run })).resolves.toBe('unauthenticated');
+  });
+
   it('hyc 不存在(ENOENT)→ unauthenticated', async () => {
     const run = () => ({ error: enoentError() });
     await expect(checkAuthStatus({ run })).resolves.toBe('unauthenticated');
@@ -152,7 +157,7 @@ describe('listSchedules', () => {
     expect(result.error).toContain('不是合法 JSON');
   });
 
-  it('输出 {"error":...} → ok:false 且原样透传', async () => {
+  it('输出 {"error":...} 信封(实测契约:退出 0 + stdout 错误信封,不能只看退出码)→ ok:false 且原样透传', async () => {
     const run = () => ({ status: 0, stdout: '{"error":"登录已过期，请重新执行 hyc login: 请先登录"}' });
     const result = await listSchedules({ run });
     expect(result).toEqual({ ok: false, error: '登录已过期，请重新执行 hyc login: 请先登录' });
@@ -187,7 +192,7 @@ describe('scheduleAction', () => {
     },
   );
 
-  it('退出 0 但输出 {"error":...}(server 错误以退出 0 返回)→ ok:false 且原样透传', async () => {
+  it('退出 0 + {"error":...} 信封(实测契约 2026-08-16:server 错误以退出码 0 返回)→ ok:false 且原样透传', async () => {
     const run = () => ({ status: 0, stdout: '{"error":"PATCH /api/companion/schedule/events/x/enabled: 事件未找到"}' });
     const result = await scheduleAction('enable', 'id-1', { run });
     expect(result).toEqual({ ok: false, error: 'PATCH /api/companion/schedule/events/x/enabled: 事件未找到' });
