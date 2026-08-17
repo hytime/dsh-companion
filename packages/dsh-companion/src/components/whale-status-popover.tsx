@@ -82,6 +82,7 @@ export const WhaleStatusPopover = React.forwardRef<HTMLDivElement, WhaleStatusPo
           : '',
         affection.cooldownFactor > 0 ? `冷却 ${affection.cooldownFactor.toFixed(1)}` : '',
         affection.lastEvaluatedDate ? `评价 ${affection.lastEvaluatedDate}` : '',
+        affection.lastAnnouncedDate ? `提醒 ${affection.lastAnnouncedDate}` : '',
       ]
         .filter(Boolean)
         .join(' · ')

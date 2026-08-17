@@ -165,6 +165,13 @@ describe('apply(异步挂载 CompanionRemote 后再读取服务)', () => {
 });
 
 describe('applySettingsToBuddy(名称/称呼/好感度开关消费)', () => {
+  it('默认配置的空名称回退线上人格名称和称呼', () => {
+    expect(applySettingsToBuddy({ ...ONLINE_BASE, companionName: '小小梦', userCallName: '伟大的造物主' }, DEFAULT_SETTINGS)).toMatchObject({
+      companionName: '小小梦',
+      userCallName: '伟大的造物主',
+    });
+  });
+
   it('配置非空的 companionName/userCallName 优先于线上值', () => {
     const settings: CompanionSettings = { ...DEFAULT_SETTINGS, companionName: '小鲸', userCallName: '主人' };
     const result = applySettingsToBuddy(ONLINE_BASE, settings);

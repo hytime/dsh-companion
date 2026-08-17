@@ -14,8 +14,8 @@ export interface CompanionSettings {
 
 /** 缺省配置:文件不存在 / 非法 JSON 时的兜底值。 */
 export const DEFAULT_SETTINGS: CompanionSettings = {
-  companionName: '旅伴',
-  userCallName: '造物主',
+  companionName: '',
+  userCallName: '',
   showAffection: true,
   showBubble: true,
   reminderEnabled: true,

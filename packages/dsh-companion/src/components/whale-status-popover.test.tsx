@@ -44,6 +44,16 @@ describe('WhaleStatusPopover 好感度区块', () => {
     }
   });
 
+  it('affection 数值和评价/宣布日期都渲染', () => {
+    renderPopover({
+      ...ZERO_AFFECTION,
+      affectionScore: 42,
+      lastEvaluatedDate: '2026-08-25',
+      lastAnnouncedDate: '2026-08-26',
+    });
+    expect(screen.getByText('评价 2026-08-25 · 提醒 2026-08-26')).toBeInTheDocument();
+  });
+
   it('affectionScore > 0:渲染好感度 4 行指标', () => {
     renderPopover({ ...ZERO_AFFECTION, affectionScore: 42, intimacyScore: 30 });
     for (const label of AFFECTION_LABELS) {

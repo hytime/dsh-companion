@@ -32,9 +32,6 @@ type AuthMode = 'login' | 'register';
 type AuthStatus = 'authenticated' | 'unauthenticated';
 type LoadState = 'loading' | 'ready' | 'error';
 
-const DEFAULT_NAME = '旅伴';
-const DEFAULT_CALL_NAME = '造物主';
-
 export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   const { remote } = props;
 
@@ -180,8 +177,8 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
     setConfigPending(true);
     try {
       const result = await remote.setConfig({
-        companionName: companionName.trim() || config?.companionName || DEFAULT_NAME,
-        userCallName: userCallName.trim() || config?.userCallName || DEFAULT_CALL_NAME,
+        companionName: companionName.trim(),
+        userCallName: userCallName.trim(),
         showAffection,
         showBubble,
       });
