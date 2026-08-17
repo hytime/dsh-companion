@@ -56,6 +56,10 @@ export interface CommandResult {
 export interface ScheduleListResult {
   ok: boolean;
   items?: ScheduleItem[];
+  page?: number;
+  pageSize?: number;
+  total?: number;
+  totalPages?: number;
   error?: string;
 }
 
@@ -199,11 +203,7 @@ export async function logout(options: { run?: RunCmd } = {}): Promise<CommandRes
   return { ok: true };
 }
 
-/**
- * 解析 schedule list 输出：接受 `{items:[...]}` 分页信封（真实形态）与裸数组；
- * `{"error":...}` 信封原样透传；其余（非 JSON / 结构不符）→ 解析错误。
- */
-function parseScheduleList(stdout: string): { ok: true; items: ScheduleItem[] } | { ok: false; error: string } {
+function parseScheduleList(stdout: string): ScheduleListResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(stdout);
@@ -212,20 +212,57 @@ function parseScheduleList(stdout: string): { ok: true; items: ScheduleItem[] } 
   }
   if (Array.isArray(parsed)) return { ok: true, items: parsed as ScheduleItem[] };
   if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-    const obj = parsed as { items?: unknown; error?: unknown };
+    const obj = parsed as {
+      items?: unknown;
+      error?: unknown;
+      page?: unknown;
+      page_size?: unknown;
+      total?: unknown;
+      total_pages?: unknown;
+    };
     if (typeof obj.error === 'string' && obj.error.trim()) return { ok: false, error: obj.error.trim() };
-    if (Array.isArray(obj.items)) return { ok: true, items: obj.items as ScheduleItem[] };
+    if (Array.isArray(obj.items)) {
+      return {
+        ok: true,
+        items: obj.items as ScheduleItem[],
+        ...(typeof obj.page === 'number' ? { page: obj.page } : {}),
+        ...(typeof obj.page_size === 'number' ? { pageSize: obj.page_size } : {}),
+        ...(typeof obj.total === 'number' ? { total: obj.total } : {}),
+        ...(typeof obj.total_pages === 'number' ? { totalPages: obj.total_pages } : {}),
+      };
+    }
   }
   return { ok: false, error: 'schedule list 输出不是合法 JSON' };
 }
 
-/** 列出定时陪伴事件：`hyc schedule list`，解析 stdout JSON 为 ScheduleItem[]。 */
-export async function listSchedules(options: { run?: RunCmd } = {}): Promise<ScheduleListResult> {
+/** 列出定时陪伴事件：`hyc schedule list`，可选透传服务端分页参数。 */
+export async function listSchedules(
+  options: { page?: number; pageSize?: number; run?: RunCmd } = {},
+): Promise<ScheduleListResult> {
   const run = options.run ?? defaultRun;
-  const result = runOrCatch(run, 'hyc', ['schedule', 'list']);
+  const args = ['schedule', 'list'];
+  if (options.page !== undefined) args.push('--page', String(options.page));
+  if (options.pageSize !== undefined) args.push('--page-size', String(options.pageSize));
+  const result = runOrCatch(run, 'hyc', args);
   if (result.error) return { ok: false, error: passthroughError(result) };
   if (result.status !== 0) return { ok: false, error: passthroughError(result) };
   return parseScheduleList(result.stdout ?? '');
+}
+
+/** 通过自然语言创建定时陪伴事件：`hyc schedule understand --text <text>`。 */
+export async function scheduleUnderstand(
+  text: string,
+  options: { run?: RunCmd } = {},
+): Promise<CommandResult> {
+  const normalized = text.trim();
+  if (!normalized) return { ok: false, error: '提醒内容不能为空' };
+  const run = options.run ?? defaultRun;
+  const result = runOrCatch(run, 'hyc', ['schedule', 'understand', '--text', normalized]);
+  if (result.error) return { ok: false, error: passthroughError(result) };
+  if (result.status !== 0) return { ok: false, error: passthroughError(result) };
+  const jsonError = extractJsonError(result.stdout);
+  if (jsonError) return { ok: false, error: jsonError };
+  return { ok: true };
 }
 
 /**

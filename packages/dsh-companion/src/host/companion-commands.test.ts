@@ -4,6 +4,7 @@ import {
   COMMAND_TIMEOUT_MS,
   listSchedules,
   loginWithCredentials,
+  scheduleUnderstand,
   logout,
   registerWithCredentials,
   scheduleAction,
@@ -160,20 +161,27 @@ describe('hyc 挂起超时保护(spawnSync timeout 的 ETIMEDOUT 形态)', () =>
 });
 
 describe('listSchedules', () => {
-  it('调用 hyc schedule list,输出 {items:[...]} 分页信封 → 解析出 items 数组', async () => {
+  it('透传分页参数并保留 {items:[...]} 分页信封', async () => {
     const calls: Array<[string, string[]]> = [];
     const run = (cmd: string, args: string[]) => {
       calls.push([cmd, args]);
       return {
         status: 0,
-        stdout: JSON.stringify({ items: [item], page: 1, page_size: 10, total: 1, total_pages: 1 }),
+        stdout: JSON.stringify({ items: [item], page: 2, page_size: 5, total: 11, total_pages: 3 }),
       };
     };
-    await expect(listSchedules({ run })).resolves.toEqual({ ok: true, items: [item] });
-    expect(calls).toEqual([['hyc', ['schedule', 'list']]]);
+    await expect(listSchedules({ page: 2, pageSize: 5, run })).resolves.toEqual({
+      ok: true,
+      items: [item],
+      page: 2,
+      pageSize: 5,
+      total: 11,
+      totalPages: 3,
+    });
+    expect(calls).toEqual([['hyc', ['schedule', 'list', '--page', '2', '--page-size', '5']]]);
   });
 
-  it('输出为裸数组 → 同样解析为数组', async () => {
+  it('输出为裸数组 → 同样解析为数组且分页字段缺省', async () => {
     const run = () => ({ status: 0, stdout: JSON.stringify([item]) });
     await expect(listSchedules({ run })).resolves.toEqual({ ok: true, items: [item] });
   });
@@ -202,6 +210,41 @@ describe('listSchedules', () => {
     const result = await listSchedules({ run });
     expect(result.ok).toBe(false);
     expect(result.error).toContain('ENOENT');
+  });
+});
+
+describe('scheduleUnderstand', () => {
+  it('调用 hyc schedule understand --text <text> → ok:true', async () => {
+    const calls: Array<[string, string[]]> = [];
+    const run = (cmd: string, args: string[]) => {
+      calls.push([cmd, args]);
+      return { status: 0, stdout: '{"ok":true}' };
+    };
+    await expect(scheduleUnderstand('明天早上九点提醒我喝水', { run })).resolves.toEqual({ ok: true });
+    expect(calls).toEqual([['hyc', ['schedule', 'understand', '--text', '明天早上九点提醒我喝水']]]);
+  });
+
+  it('空白文本 → ok:false 且不执行 CLI', async () => {
+    let calls = 0;
+    const result = await scheduleUnderstand('  \n ', { run: () => { calls += 1; return { status: 0 }; } });
+    expect(result).toEqual({ ok: false, error: '提醒内容不能为空' });
+    expect(calls).toBe(0);
+  });
+
+  it('CLI 返回 error 信封 → ok:false 且透传错误', async () => {
+    const result = await scheduleUnderstand('提醒我喝水', {
+      run: () => ({ status: 0, stdout: '{"error":"无法理解提醒内容"}' }),
+    });
+    expect(result).toEqual({ ok: false, error: '无法理解提醒内容' });
+  });
+
+  it('CLI 非零退出或执行异常 → ok:false 且透传错误', async () => {
+    await expect(scheduleUnderstand('提醒我喝水', {
+      run: () => ({ status: 2, stderr: '参数错误' }),
+    })).resolves.toEqual({ ok: false, error: '参数错误' });
+    await expect(scheduleUnderstand('提醒我喝水', {
+      run: () => { throw new Error('hyc unavailable'); },
+    })).resolves.toEqual({ ok: false, error: 'hyc unavailable' });
   });
 });
 
