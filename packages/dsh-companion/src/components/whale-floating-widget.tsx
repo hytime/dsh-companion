@@ -180,10 +180,11 @@ export function WhaleFloatingWidget({
     if (buddyMessage === lastBuddyRef.current) return;
     if (status === 'connecting' || status === 'thinking' || status === 'replying') return;
     lastBuddyRef.current = buddyMessage;
-    if (buddyTitle !== undefined && buddyTitle !== '') {
-      setReplyToast(null);
-      setToast({ title: buddyTitle, message: buddyMessage });
-    }
+    setReplyToast(null);
+    setToast({
+      title: buddyTitle !== undefined && buddyTitle !== '' ? buddyTitle : '提醒',
+      message: buddyMessage,
+    });
   }, [buddyMessage, buddyTitle, status]);
 
   // 新对话回复 → 单独的人物对话气泡，8s 自动消失；与提醒互斥（弹回复时关提醒）。

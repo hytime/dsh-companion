@@ -44,7 +44,9 @@ export function inferFromToolResult(
   return { status: 'replying' };
 }
 
-/** agent/status（回到 idle）→ success，仅在 replying 时。 */
+/** agent/status（回到 idle）→ success：任何忙态都复位，避免中断后卡死。 */
 export function inferFromAgentIdle(current: SkillStatus): StatusUpdate | null {
-  return current === 'replying' ? { status: 'success' } : null;
+  return current === 'connecting' || current === 'thinking' || current === 'replying'
+    ? { status: 'success' }
+    : null;
 }

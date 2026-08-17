@@ -198,6 +198,49 @@ describe('WhaleFloatingWidget', () => {
   });
 });
 
+describe('buddy 提醒 toast（到点弹提醒）', () => {
+  it('收到 buddy 消息弹出提醒 toast（标题 + 消息）', async () => {
+    render(
+      <WhaleFloatingWidget
+        status="idle"
+        companionName="小小梦"
+        buddyTitle="喝水提醒"
+        buddyMessage="该喝水了"
+      />,
+    );
+    expect(await screen.findByText('喝水提醒')).toBeInTheDocument();
+    // 打字机逐字显示，findByText 轮询等待完整文本
+    expect(await screen.findByText('该喝水了', undefined, { timeout: 3000 })).toBeInTheDocument();
+  });
+
+  it('无标题提醒（server 兜底消息 title 为空）回退「提醒」照常弹出', async () => {
+    render(
+      <WhaleFloatingWidget
+        status="idle"
+        companionName="小小梦"
+        buddyMessage="早呀，昨晚睡得还好吗"
+      />,
+    );
+    expect(await screen.findByText('提醒')).toBeInTheDocument();
+    expect(await screen.findByText('早呀，昨晚睡得还好吗', undefined, { timeout: 3000 })).toBeInTheDocument();
+  });
+
+  it('回复中（thinking）到达的提醒不弹，状态复位（success）后补弹', async () => {
+    const props = {
+      status: 'thinking' as const,
+      companionName: '小小梦',
+      buddyTitle: '上班鼓励',
+      buddyMessage: '打起精神来',
+    };
+    const { rerender } = render(<WhaleFloatingWidget {...props} />);
+    expect(screen.queryByText('打起精神来')).toBeNull();
+    // 状态卡死修复后：agent idle → success，忙态解除，待显示的提醒补弹
+    rerender(<WhaleFloatingWidget {...props} status="success" />);
+    expect(await screen.findByText('上班鼓励')).toBeInTheDocument();
+    expect(await screen.findByText('打起精神来', undefined, { timeout: 3000 })).toBeInTheDocument();
+  });
+});
+
 describe('companion.css 约束', () => {
   it('只使用 dsh-companion 命名空间并支持 prefers-reduced-motion', () => {
     const css = readFileSync(resolve(__dirname, '../styles/companion.module.css'), 'utf8');

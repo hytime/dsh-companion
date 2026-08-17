@@ -45,8 +45,16 @@ describe('inferFromAgentIdle', () => {
   it('replying → success', () => {
     expect(inferFromAgentIdle('replying')).toEqual({ status: 'success' });
   });
-  it('非 replying → null', () => {
-    expect(inferFromAgentIdle('thinking')).toBeNull();
+  it('thinking → success（工具被中断后状态不得卡死，否则永久抑制 buddy 提醒 toast）', () => {
+    expect(inferFromAgentIdle('thinking')).toEqual({ status: 'success' });
+  });
+  it('connecting → success', () => {
+    expect(inferFromAgentIdle('connecting')).toEqual({ status: 'success' });
+  });
+  it('非忙态（idle/success/error/cancelled）→ null（无状态跃迁）', () => {
     expect(inferFromAgentIdle('idle')).toBeNull();
+    expect(inferFromAgentIdle('success')).toBeNull();
+    expect(inferFromAgentIdle('error')).toBeNull();
+    expect(inferFromAgentIdle('cancelled')).toBeNull();
   });
 });
