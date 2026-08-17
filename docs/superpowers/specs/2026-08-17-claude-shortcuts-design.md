@@ -27,7 +27,7 @@ DSH 已有以下能力：
 
 ## 插件架构
 
-目标包名：@deepseek-ai/dsh-client-ui-claude-shortcuts。
+目标包名：@hytime/dsh-client-ui-claude-shortcuts。
 
 插件只提供 client/browser half：
 

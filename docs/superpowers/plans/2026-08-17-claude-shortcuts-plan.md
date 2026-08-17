@@ -4,7 +4,7 @@
 
 目标：在 DSH Web 中新增独立客户端插件，为任务问答和授权/审批提供 ↑/↓、Enter、Esc 键盘操作，不启动 Claude CLI，也不修改 DSH 核心问答包。
 
-架构：在 DSH checkout 的 packages/client 下创建 @deepseek-ai/dsh-client-ui-claude-shortcuts。插件以高优先级注册 conversation.composer takeover，匹配 question 和 approval pending interaction，并在组件内部维护键盘状态。Esc 通过当前 session scope 的 conversation.cancel() 中断任务；Enter 通过既有 carrier response API 回答。
+架构：在 DSH checkout 的 packages/client 下创建 @hytime/dsh-client-ui-claude-shortcuts。插件以高优先级注册 conversation.composer takeover，匹配 question 和 approval pending interaction，并在组件内部维护键盘状态。Esc 通过当前 session scope 的 conversation.cancel() 中断任务；Enter 通过既有 carrier response API 回答。
 
 技术栈：TypeScript、React、Cordis、dsh-client-ui-slots、dsh-client-ui-conversation、dsh-client-ui-user-questions、Vitest、Testing Library、Playwright。
 
@@ -64,7 +64,7 @@
 
   package.json 必须声明：
 
-      name: @deepseek-ai/dsh-client-ui-claude-shortcuts
+      name: @hytime/dsh-client-ui-claude-shortcuts
       main: lib/index.js
       types: lib/types/index.d.ts
       exports: ., ./client, ./invariant, ./src/*, ./package.json
@@ -84,7 +84,7 @@
   在 packages/bundle/web-app/package.json 的 dependencies 中加入新 workspace 包；在 cordis.patch.yml 的 ui-user-questions 条目之后加入：
 
       - id: ui-claude-shortcuts
-        name: '@deepseek-ai/dsh-client-ui-claude-shortcuts'
+        name: '@hytime/dsh-client-ui-claude-shortcuts'
 
   使用稳定 id，保证 HMR 和 patch 重载只替换该插件。
 
@@ -102,7 +102,7 @@
 
   运行：
 
-      pnpm --filter @deepseek-ai/dsh-client-ui-claude-shortcuts run bundle
+      pnpm --filter @hytime/dsh-client-ui-claude-shortcuts run bundle
 
   预期：生成 lib/index.js、lib/client.js 和类型产物，命令退出码为 0。
 
@@ -380,7 +380,7 @@
   运行：
 
       cd /Volumes/hydisk/deepseek-harness
-      pnpm --filter @deepseek-ai/dsh-client-ui-claude-shortcuts run bundle
+      pnpm --filter @hytime/dsh-client-ui-claude-shortcuts run bundle
       pnpm exec tsc --noEmit -p packages/client/ui-claude-shortcuts/tsconfig.json
 
   预期：bundle 和 TypeScript 检查退出码均为 0。
@@ -413,7 +413,7 @@
 
   运行：
 
-      pnpm --filter @deepseek-ai/dsh-client-ui-claude-shortcuts pack --pack-destination /tmp/dsh-claude-shortcuts-pack
+      pnpm --filter @hytime/dsh-client-ui-claude-shortcuts pack --pack-destination /tmp/dsh-claude-shortcuts-pack
       tar -tzf /tmp/dsh-claude-shortcuts-pack/deepseek-ai-dsh-client-ui-claude-shortcuts-*.tgz
 
   预期：tarball 包含 lib/index.js、lib/client.js、lib/invariant.js、lib/types/**/*.d.ts 和 package.json，不包含 tests、源码 fixture 或本地构建缓存。
