@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { Remote, TypertRemoteService, remoteMethods } from '@deepseek-ai/dsh-typert-protocol';
+import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { Context } from '@deepseek-ai/cordis';
 import { REMOTE_PACKAGE, REMOTE_SERVICE } from '../contracts/remote-descriptors';
 import { inferFromAgentIdle, inferFromToolResult, inferFromToolStart, type StatusUpdate } from './status-inference';
@@ -503,10 +503,71 @@ export class CompanionRemote extends TypertRemoteService {
   }
 }
 
+/** 14 个 @Remote 公开方法名（与类中装饰器一一对应）。 */
+const REMOTE_METHOD_NAMES = [
+  'status', 'buddy', 'latestReply', 'asset', 'authStatus', 'login', 'register', 'logout',
+  'getConfig', 'setConfig', 'listSchedules', 'enableSchedule', 'disableSchedule', 'deleteSchedule',
+] as const;
+
+/**
+ * 双表注册（开发模式双实例适配）：
+ *
+ * DSH 以 tsx 从源码运行时，typert-protocol 包会以两个模块实例加载——in-box 源码
+ * 导入解析到 src/index.ts（网关与内置服务读取此实例的私有标记表），而本插件
+ * （构建产物 .js）的导入解析到 lib/index.js（类装饰器默认写入此实例的表）。
+ * 两张表互不可见，导致网关在 SRC 弱解析路径上看不到本插件的端点
+ * （/api/travelNoteCompanion/* 404）。
+ *
+ * 这里在服务挂载前，把同一组 @Remote 标记镜像写入 src 实例的标记表：按标准
+ * ClassMethodDecoratorContext 契约调用 src 实例的 Remote，收集其注册的实例
+ * 初始器，再以原型探针对象执行，使 mark(prototype, ...) 落到该实例的 WeakMap。
+ * 生产安装（src 不随包发布）时该子路径导入失败自动跳过——单实例环境下本插件的
+ * 标记本就与网关同表，无需镜像。开发模式下请确保 profile 的
+ * @deepseek-ai/dsh-typert-protocol 解析到 workspace 源码（src 子路径可用）。
+ */
+/** 开发模式镜像注册的备选实例说明符：运行时按包的 exports 映射解析到 workspace
+ *  源码（tsx 加载），发布产物不含 src 时导入失败由调用方兜底。用变量而非字面量
+ *  书写，避免构建/测试工具链对子路径的静态解析。 */
+const SRC_PROTOCOL_SPECIFIER = '@deepseek-ai/dsh-typert-protocol/src/index.ts';
+
+let alternateMarkersRegistered = false;
+export async function registerAlternateProtocolMarkers(
+  alternate?: { Remote: typeof Remote },
+): Promise<void> {
+  if (alternate === undefined) {
+    if (alternateMarkersRegistered) return;
+    alternateMarkersRegistered = true;
+  }
+  let srcProtocol: { Remote: typeof Remote } | undefined = alternate;
+  if (srcProtocol === undefined) {
+    const imported: unknown = await import(SRC_PROTOCOL_SPECIFIER).catch(() => undefined);
+    srcProtocol = imported as { Remote: typeof Remote } | undefined;
+  }
+  if (srcProtocol === undefined) return;
+  const initializers: Array<() => void> = [];
+  for (const methodName of REMOTE_METHOD_NAMES) {
+    const method = Reflect.get(CompanionRemote.prototype, methodName) as ((...args: never[]) => unknown) | undefined;
+    if (typeof method !== 'function') continue;
+    srcProtocol.Remote(method, {
+      kind: 'method',
+      name: methodName,
+      static: false,
+      private: false,
+      addInitializer: (initializer: () => void) => initializers.push(initializer),
+    } as unknown as ClassMethodDecoratorContext);
+  }
+  const probe = Object.create(CompanionRemote.prototype);
+  for (const initializer of initializers) initializer.call(probe);
+}
+
 export async function apply(ctx: Context, options: TravelNoteCompanionHostOptions = {}) {
   // 前置自愈（hyc/技能检查 + 缺失自动安装）：编排抽到 prereq-self-heal 的
   // runSelfHeal，此处仅 fire-and-forget（void），不阻塞 apply。
   void runSelfHeal({});
+
+  // 双表注册：把 @Remote 标记镜像写入 src 实例的标记表（开发模式双实例适配，
+  // 生产安装自动跳过）。必须在服务挂载前完成，保证网关任何时刻都能发现端点。
+  await registerAlternateProtocolMarkers();
 
   // 注册 SRC Remote 服务（共 14 个 @Remote：status / buddy / latestReply / asset +
   // authStatus / login / register / logout / getConfig / setConfig / listSchedules /
@@ -515,12 +576,6 @@ export async function apply(ctx: Context, options: TravelNoteCompanionHostOption
   // 但 gateway 的 collectSrcClaims 只遍历 fiber-owned service，否则端点 404。
   await ctx.plugin(CompanionRemote);
   const remote = ctx.get(REMOTE_SERVICE) as CompanionRemote;
-  // 诊断(临时):确认 SRC Remote 注册对 gateway 可见的条件
-  const props = (ctx.reflect as { props?: Record<string, unknown> }).props ?? {};
-  console.log('[dsh-companion] diag: props =', Object.keys(props).filter((k) => k.includes('travel') || k.includes('companion')).join(','));
-  console.log('[dsh-companion] diag: get(travelNoteCompanion) =', remote !== undefined);
-  console.log('[dsh-companion] diag: binding =', remote !== undefined ? remote.typertRemote.namespace : 'N/A');
-  console.log('[dsh-companion] diag: remoteMethods =', remote !== undefined ? remoteMethods(remote).map((m) => m.method).join(',') : 'N/A');
   // 主动通知 gateway 重置 SRC claims 缓存：Service 在 fiber LOADING 阶段注册，
   // 不会触发 Cordis 的 internal/service 通知（notify 仅在 ACTIVE 时执行）；若 gateway
   // 的 srcClaims 已在本插件加载前（web UI 初始化 remote 调用）缓存空集，端点将 404。

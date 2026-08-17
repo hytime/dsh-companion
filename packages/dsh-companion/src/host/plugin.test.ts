@@ -14,6 +14,7 @@ import {
   buddyPollIntervalMs,
   CompanionRemote,
   createBuddyTimer,
+  registerAlternateProtocolMarkers,
   scheduleInitialPushes,
   selectPushChannels,
 } from './plugin';
@@ -434,5 +435,29 @@ describe('apply(启动路径:初始 readSettings 完成后 restart 重建定时�
 
     vi.mocked(readSettings).mockReset();
     vi.useRealTimers();
+  });
+});
+
+describe('registerAlternateProtocolMarkers(双表注册:备选实例镜像标记)', () => {
+  it('把 14 个 @Remote 标记镜像写入另一协议实例的私有标记表', async () => {
+    // 备选实例:同一协议库经带 query 的 file URL 再加载一次,得到与主导入
+    // 不同的模块实例(私有标记表独立)——等价于开发模式 src/lib 双实例分裂。
+    const { createRequire } = await import('node:module');
+    const { pathToFileURL } = await import('node:url');
+    const require2 = createRequire(import.meta.url);
+    const libPath = require2.resolve('@deepseek-ai/dsh-typert-protocol');
+    type ProtocolModule = typeof import('@deepseek-ai/dsh-typert-protocol');
+    const alternateModule: unknown = await import(/* @vite-ignore */ `${pathToFileURL(libPath).href}?alternate=1`);
+    const alternate = alternateModule as ProtocolModule;
+
+    const probe = Object.create(CompanionRemote.prototype);
+    // 镜像前:备选实例的标记表中没有本类任何标记(双实例分裂的源头)
+    expect(alternate.remoteMethods(probe)).toHaveLength(0);
+    await registerAlternateProtocolMarkers(alternate);
+    const methods = alternate.remoteMethods(probe).map((m) => m.method);
+    expect(methods).toEqual([
+      'status', 'buddy', 'latestReply', 'asset', 'authStatus', 'login', 'register', 'logout',
+      'getConfig', 'setConfig', 'listSchedules', 'enableSchedule', 'disableSchedule', 'deleteSchedule',
+    ]);
   });
 });
