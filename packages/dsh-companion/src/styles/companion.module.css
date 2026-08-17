@@ -478,6 +478,66 @@
   gap: 12px;
 }
 
+.dsh-companion-settings-card__schedule-create {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.dsh-companion-settings-card__schedule-create .dsh-companion-settings-card__field {
+  flex: 1 1 auto;
+}
+
+.dsh-companion-settings-card__schedule-create .dsh-companion-settings-card__submit {
+  flex: 0 0 auto;
+}
+
+.dsh-companion-settings-card__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.dsh-companion-settings-card__pagination-button {
+  padding: 5px 10px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dsh-companion-settings-card__pagination-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.dsh-companion-settings-card__pagination-button:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: -1px;
+}
+
+.dsh-companion-settings-card__pagination-summary {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .dsh-companion-settings-card__schedule-create {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dsh-companion-settings-card__pagination {
+    justify-content: center;
+  }
+}
+
 .dsh-companion-settings-card__list {
   margin: 2px 0 0;
   padding: 0;
