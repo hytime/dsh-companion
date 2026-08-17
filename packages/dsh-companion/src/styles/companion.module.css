@@ -386,9 +386,7 @@
   color: var(--dsw-alias-label-secondary);
 }
 
-.dsh-companion-settings-card__field input[type='text'],
-.dsh-companion-settings-card__field input[type='password'],
-.dsh-companion-settings-card__field input[type='number'] {
+.dsh-companion-settings-card__field input:not([type='checkbox']) {
   flex: 1 1 auto;
   min-width: 0;
   box-sizing: border-box;
@@ -400,9 +398,7 @@
   font-size: 13px;
 }
 
-.dsh-companion-settings-card__field input[type='text']:focus-visible,
-.dsh-companion-settings-card__field input[type='password']:focus-visible,
-.dsh-companion-settings-card__field input[type='number']:focus-visible {
+.dsh-companion-settings-card__field input:not([type='checkbox']):focus-visible {
   outline: 2px solid var(--dsw-alias-brand-primary);
   outline-offset: -1px;
 }
@@ -501,7 +497,7 @@
 }
 
 .dsh-companion-settings-card__schedule-create .dsh-companion-settings-card__field {
-  flex: 1 1 auto;
+  flex: 0 1 360px;
 }
 
 .dsh-companion-settings-card__schedule-create .dsh-companion-settings-card__submit {

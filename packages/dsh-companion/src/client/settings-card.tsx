@@ -153,6 +153,21 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
           setShowBubble(cfg.value.showBubble);
           setReminderEnabled(cfg.value.reminderEnabled);
           setReminderIntervalMin(cfg.value.reminderIntervalMin);
+          const fillCompanionName = cfg.value.companionName === '';
+          const fillUserCallName = cfg.value.userCallName === '';
+          if (fillCompanionName || fillUserCallName) {
+            void remote.buddy().then((buddyResult) => {
+              if (!active || !buddyResult.ok) return;
+              if (fillCompanionName) {
+                setCompanionName((current) => current === '' ? buddyResult.value.companionName : current);
+              }
+              if (fillUserCallName) {
+                setUserCallName((current) => current === '' ? buddyResult.value.userCallName : current);
+              }
+            }).catch(() => {
+              // 本地配置为空且线上人格不可用时，保留空输入供用户手动配置。
+            });
+          }
         }
       } else {
         errors.push('读取配置失败');
@@ -415,8 +430,10 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
         )}
       </section>
 
-      <section className={styles['dsh-companion-settings-card__section']}>
-        <h4 className={styles['dsh-companion-settings-card__title']}>基本配置</h4>
+      {authStatus === 'authenticated' ? (
+        <>
+          <section className={styles['dsh-companion-settings-card__section']}>
+            <h4 className={styles['dsh-companion-settings-card__title']}>基本配置</h4>
         <label className={styles['dsh-companion-settings-card__field']}>
           <span className={styles['dsh-companion-settings-card__label']}>旅伴名称</span>
           <input value={companionName} onChange={(event) => setCompanionName(event.target.value)} />
@@ -594,7 +611,9 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
             下一页
           </button>
         </div>
-      </section>
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }

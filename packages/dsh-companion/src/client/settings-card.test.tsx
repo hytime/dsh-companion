@@ -53,7 +53,7 @@ function createRemote(overrides: Partial<CompanionRemoteFace> = {}): CompanionRe
     asset: vi.fn(),
     status: vi.fn(),
     latestReply: vi.fn(),
-    authStatus: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, status: 'unauthenticated' as const } })),
+    authStatus: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, status: 'authenticated' as const } })),
     login: vi.fn(),
     register: vi.fn(),
     logout: vi.fn(),
@@ -68,6 +68,16 @@ function createRemote(overrides: Partial<CompanionRemoteFace> = {}): CompanionRe
   };
 }
 
+function createUnauthenticatedRemote(overrides: Partial<CompanionRemoteFace> = {}): CompanionRemoteFace {
+  return createRemote({
+    authStatus: vi.fn<CompanionRemoteFace['authStatus']>(async () => ({
+      ok: true as const,
+      value: { ok: true as const, status: 'unauthenticated' as const },
+    })),
+    ...overrides,
+  });
+}
+
 function renderCard(remote: CompanionRemoteFace) {
   return render(<SettingsCard remote={remote} close={(): void => {}} />);
 }
@@ -77,12 +87,29 @@ describe('SettingsCard', () => {
     renderCard(createRemote());
     expect(screen.getByText('我的鲸鱼娘')).toBeInTheDocument();
     expect(screen.getByText('账号与密码')).toBeInTheDocument();
-    expect(screen.getByText('基本配置')).toBeInTheDocument();
+    expect(await screen.findByText('基本配置')).toBeInTheDocument();
+    expect(screen.getByText('事件提醒')).toBeInTheDocument();
+  });
+
+  it('未登录时只显示账号区块，隐藏基本配置和事件提醒', async () => {
+    const remote = createUnauthenticatedRemote();
+    renderCard(remote);
+    await screen.findByText('账号与密码');
+    expect(screen.queryByText('基本配置')).not.toBeInTheDocument();
+    expect(screen.queryByText('事件提醒')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('旅伴名称')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('对你的称呼')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('新的提醒')).not.toBeInTheDocument();
+  });
+
+  it('登录状态下显示基本配置和事件提醒', async () => {
+    renderCard(createRemote());
+    expect(await screen.findByText('基本配置')).toBeInTheDocument();
     expect(screen.getByText('事件提醒')).toBeInTheDocument();
   });
 
   it('登录模式:账号密码为空点提交 → 错误「请输入账号和密码」,不调用 remote.login', async () => {
-    const remote = createRemote();
+    const remote = createUnauthenticatedRemote();
     const user = userEvent.setup();
     renderCard(remote);
     await screen.findByText('账号与密码');
@@ -92,7 +119,7 @@ describe('SettingsCard', () => {
   });
 
   it('注册模式:密码 < 8 位 → 错误;两次密码不一致 → 错误;不调用 remote.register', async () => {
-    const remote = createRemote();
+    const remote = createUnauthenticatedRemote();
     const user = userEvent.setup();
     renderCard(remote);
     await screen.findByText('账号与密码');
@@ -145,6 +172,36 @@ describe('SettingsCard', () => {
     expect(form?.querySelector('button[type="submit"]')).not.toBeNull();
     const css = readFileSync(resolve(__dirname, '../styles/companion.module.css'), 'utf8');
     expect(css).toContain('.dsh-companion-settings-card__section form:not(.dsh-companion-settings-card__schedule-create)');
+    expect(css).toContain('.dsh-companion-settings-card__schedule-create .dsh-companion-settings-card__field {\n  flex: 0 1 360px;');
+    expect(css).toContain('.dsh-companion-settings-card__field input:not([type=\'checkbox\']) {');
+  });
+
+  it('本地名称为空时用线上 buddy 人格回填配置输入', async () => {
+    const remote = createRemote({
+      getConfig: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, ...DEFAULT_SETTINGS, companionName: '', userCallName: '' } })),
+      buddy: vi.fn(async () => ({
+        ok: true as const,
+        value: {
+          message: '',
+          title: '',
+          dueAt: '',
+          companionName: '小小梦',
+          userCallName: '伟大的造物主',
+          affectionScore: 0,
+          intimacyScore: 0,
+          trustScore: 0,
+          engagementScore: 0,
+          talkativenessFactor: 0,
+          proactiveProbabilityFactor: 0,
+          cooldownFactor: 0,
+          lastEvaluatedDate: '',
+          lastAnnouncedDate: '',
+        },
+      })),
+    });
+    renderCard(remote);
+    await waitFor(() => expect(screen.getByLabelText('旅伴名称')).toHaveValue('小小梦'));
+    expect(screen.getByLabelText('对你的称呼')).toHaveValue('伟大的造物主');
   });
 
   it('提醒列表请求失败时仍回显成功读取的旅伴名称和用户称呼', async () => {
@@ -393,7 +450,7 @@ describe('SettingsCard', () => {
 
   it('提交中:登录提交 pending 期间按钮禁用并显示「提交中…」,双击不重复提交,完成后恢复', async () => {
     const loginDeferred = createDeferred<Awaited<ReturnType<CompanionRemoteFace['login']>>>();
-    const remote = createRemote({
+    const remote = createUnauthenticatedRemote({
       login: vi.fn<CompanionRemoteFace['login']>(() => loginDeferred.promise),
     });
     const user = userEvent.setup();
