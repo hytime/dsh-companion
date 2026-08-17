@@ -156,6 +156,103 @@ describe('SettingsCard', () => {
     );
   });
 
+  it('提醒列表初始加载第一页、显示分页总数并使用固定 page size', async () => {
+    const remote = createRemote({
+      listSchedules: vi.fn(async () => ({
+        ok: true as const,
+        value: { ok: true as const, items: SCHEDULES, page: 1, pageSize: 5, total: 11, totalPages: 3 },
+      })),
+    });
+    renderCard(remote);
+    await screen.findByTestId('schedule-item-s1');
+    expect(remote.listSchedules).toHaveBeenCalledWith(1, 5);
+    expect(screen.getByText('第 1 / 3 页')).toBeInTheDocument();
+    expect(screen.getByText('共 11 条')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '上一页' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '下一页' })).toBeEnabled();
+  });
+
+  it('下一页加载 page 2，首尾页按钮边界正确', async () => {
+    const remote = createRemote({
+      listSchedules: vi.fn(async (page = 1) => ({
+        ok: true as const,
+        value: {
+          ok: true as const,
+          items: page === 1 ? SCHEDULES : [SCHEDULES[1]!],
+          page,
+          pageSize: 5,
+          total: 6,
+          totalPages: 2,
+        },
+      })),
+    });
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByTestId('schedule-item-s1');
+    await user.click(screen.getByRole('button', { name: '下一页' }));
+    await waitFor(() => expect(remote.listSchedules).toHaveBeenLastCalledWith(2, 5));
+    expect(screen.getByText('第 2 / 2 页')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '上一页' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '下一页' })).toBeDisabled();
+  });
+
+  it('翻页失败时保留原列表并显示错误', async () => {
+    const listSchedules = vi
+      .fn<CompanionRemoteFace['listSchedules']>()
+      .mockResolvedValueOnce({ ok: true as const, value: { ok: true as const, items: SCHEDULES, page: 1, total: 6, totalPages: 2 } })
+      .mockResolvedValueOnce({ ok: true as const, value: { ok: false as const, error: '分页失败' } });
+    const remote = createRemote({ listSchedules });
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByTestId('schedule-item-s1');
+    await user.click(screen.getByRole('button', { name: '下一页' }));
+    expect(await screen.findByText('分页失败')).toBeInTheDocument();
+    expect(screen.getByTestId('schedule-item-s1')).toBeInTheDocument();
+    expect(screen.getByText('第 1 / 2 页')).toBeInTheDocument();
+  });
+
+  it('新增提醒输入为空时按钮禁用，提交非空文本调用 createSchedule', async () => {
+    const remote = createRemote();
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByText('事件提醒');
+    const input = screen.getByLabelText('新的提醒');
+    expect(screen.getByRole('button', { name: '新增' })).toBeDisabled();
+    await user.type(input, '明天早上九点提醒我喝水');
+    expect(screen.getByRole('button', { name: '新增' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: '新增' }));
+    await waitFor(() => expect(remote.createSchedule).toHaveBeenCalledWith('明天早上九点提醒我喝水'));
+  });
+
+  it('创建成功后清空输入、回到第一页并刷新 listSchedules(1,5)', async () => {
+    const listSchedules = vi.fn<CompanionRemoteFace['listSchedules']>()
+      .mockResolvedValue({ ok: true as const, value: { ok: true as const, items: SCHEDULES, page: 1, total: 2, totalPages: 1 } });
+    const remote = createRemote({ listSchedules });
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByText('事件提醒');
+    const input = screen.getByLabelText('新的提醒');
+    await user.type(input, '提醒我喝水');
+    await user.click(screen.getByRole('button', { name: '新增' }));
+    await waitFor(() => expect(remote.createSchedule).toHaveBeenCalledWith('提醒我喝水'));
+    expect(input).toHaveValue('');
+    expect(remote.listSchedules).toHaveBeenLastCalledWith(1, 5);
+  });
+
+  it('创建失败时保留输入并显示错误', async () => {
+    const remote = createRemote({
+      createSchedule: vi.fn(async () => ({ ok: true as const, value: { ok: false as const, error: '无法理解提醒' } })),
+    });
+    const user = userEvent.setup();
+    renderCard(remote);
+    await screen.findByText('事件提醒');
+    const input = screen.getByLabelText('新的提醒');
+    await user.type(input, '一条无法理解的提醒');
+    await user.click(screen.getByRole('button', { name: '新增' }));
+    expect(await screen.findByText('无法理解提醒')).toBeInTheDocument();
+    expect(input).toHaveValue('一条无法理解的提醒');
+  });
+
   it('事件提醒:渲染开关/间隔输入/事件列表(2 项),启停/删除按钮调用对应方法', async () => {
     const remote = createRemote({
       listSchedules: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, items: SCHEDULES } })),

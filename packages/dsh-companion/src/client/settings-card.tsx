@@ -15,7 +15,7 @@
  */
 import * as React from 'react';
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
-import type { CompanionRemoteFace, CompanionSettings, ScheduleItem } from './companion-types';
+import type { CompanionRemoteFace, CompanionSettings, ScheduleItem, ScheduleListResult } from './companion-types';
 import { DeepSeekLogo } from '../components/deepseek-logo';
 import type {} from './slot-contract';
 import styles from '../styles/companion.module.css';
@@ -32,6 +32,8 @@ type AuthMode = 'login' | 'register';
 type AuthStatus = 'authenticated' | 'unauthenticated';
 type LoadState = 'loading' | 'ready' | 'error';
 
+const SCHEDULE_PAGE_SIZE = 5;
+
 export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   const { remote } = props;
 
@@ -41,6 +43,13 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   const [authStatus, setAuthStatus] = React.useState<AuthStatus>('unauthenticated');
   const [config, setConfig] = React.useState<CompanionSettings | null>(null);
   const [schedules, setSchedules] = React.useState<ScheduleItem[]>([]);
+  const [schedulePage, setSchedulePage] = React.useState(1);
+  const [scheduleTotalPages, setScheduleTotalPages] = React.useState(1);
+  const [scheduleTotal, setScheduleTotal] = React.useState(0);
+  const [scheduleLoading, setScheduleLoading] = React.useState(false);
+  const [scheduleText, setScheduleText] = React.useState('');
+  const [scheduleCreatePending, setScheduleCreatePending] = React.useState(false);
+  const [scheduleCreateError, setScheduleCreateError] = React.useState('');
 
   // ---- 账号区块 ----
   const [authMode, setAuthMode] = React.useState<AuthMode>('login');
@@ -75,14 +84,42 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
     if (result.ok && result.value.ok) setAuthStatus(result.value.status);
   }, [remote]);
 
-  const refreshSchedules = React.useCallback(async (): Promise<void> => {
-    const result = await remote.listSchedules();
-    if (result.ok && result.value.ok) setSchedules(result.value.items ?? []);
-  }, [remote]);
+  const applyScheduleResult = React.useCallback((value: ScheduleListResult, requestedPage: number): void => {
+    const totalPages = Math.max(1, value.totalPages ?? requestedPage);
+    const page = Math.min(Math.max(1, value.page ?? requestedPage), totalPages);
+    const items = value.items ?? [];
+    setSchedules(items);
+    setSchedulePage(page);
+    setScheduleTotalPages(totalPages);
+    setScheduleTotal(value.total ?? items.length);
+  }, []);
+
+  const loadSchedules = React.useCallback(async (page: number): Promise<boolean> => {
+    setScheduleLoading(true);
+    setReminderError('');
+    try {
+      const result = await remote.listSchedules(page, SCHEDULE_PAGE_SIZE);
+      if (!result.ok) {
+        setReminderError(result.error.message);
+        return false;
+      }
+      if (!result.value.ok) {
+        setReminderError(result.value.error ?? '读取事件列表失败');
+        return false;
+      }
+      applyScheduleResult(result.value, page);
+      return true;
+    } catch (error) {
+      setReminderError(error instanceof Error ? error.message : String(error));
+      return false;
+    } finally {
+      setScheduleLoading(false);
+    }
+  }, [applyScheduleResult, remote]);
 
   React.useEffect(() => {
     let active = true;
-    Promise.all([remote.getConfig(), remote.authStatus(), remote.listSchedules()])
+    Promise.all([remote.getConfig(), remote.authStatus(), remote.listSchedules(1, SCHEDULE_PAGE_SIZE)])
       .then(([cfg, auth, list]) => {
         if (!active) return;
         const errors: string[] = [];
@@ -101,8 +138,9 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
         }
         if (auth.ok && auth.value.ok) setAuthStatus(auth.value.status);
         else errors.push('读取认证状态失败');
-        if (list.ok && list.value.ok) setSchedules(list.value.items ?? []);
+        if (list.ok && list.value.ok) applyScheduleResult(list.value, 1);
         else errors.push('读取事件列表失败');
+        setScheduleLoading(false);
         setLoadState(errors.length === 0 ? 'ready' : 'error');
         setLoadError(errors.join('；'));
       })
@@ -110,6 +148,7 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
         if (!active) return;
         setLoadState('error');
         setLoadError('加载失败');
+        setScheduleLoading(false);
       });
     return () => {
       active = false;
@@ -209,8 +248,33 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
     }
   };
 
+  const onCreateSchedule = async (event: React.FormEvent): Promise<void> => {
+    event.preventDefault();
+    const text = scheduleText.trim();
+    if (scheduleCreatePending || text === '') return;
+    setScheduleCreatePending(true);
+    setScheduleCreateError('');
+    try {
+      const result = await remote.createSchedule(text);
+      if (result.ok && result.value.ok) {
+        setScheduleText('');
+        await loadSchedules(1);
+      } else {
+        setScheduleCreateError(result.ok ? result.value.error ?? '新增提醒失败' : result.error.message);
+      }
+    } finally {
+      setScheduleCreatePending(false);
+    }
+  };
+
+  const onSchedulePage = (page: number): void => {
+    if (scheduleLoading || scheduleActionId !== null || scheduleCreatePending) return;
+    if (page < 1 || page > scheduleTotalPages || page === schedulePage) return;
+    void loadSchedules(page);
+  };
+
   const onScheduleAction = async (item: ScheduleItem, action: 'enable' | 'disable' | 'delete'): Promise<void> => {
-    if (scheduleActionId !== null) return;
+    if (scheduleActionId !== null || scheduleLoading) return;
     setReminderError('');
     setScheduleActionId(item.id);
     try {
@@ -221,7 +285,7 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
             ? await remote.disableSchedule(item.id)
             : await remote.deleteSchedule(item.id);
       if (result.ok && result.value.ok) {
-        await refreshSchedules();
+        await loadSchedules(schedulePage);
       } else {
         setReminderError(result.ok ? result.value.error ?? '操作失败' : result.error.message);
       }
@@ -419,7 +483,33 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
             已保存
           </p>
         )}
-        {schedules.length > 0 && (
+        <form
+          className={styles['dsh-companion-settings-card__schedule-create']}
+          onSubmit={(event) => void onCreateSchedule(event)}
+        >
+          <label className={styles['dsh-companion-settings-card__field']}>
+            <span className={styles['dsh-companion-settings-card__label']}>新的提醒</span>
+            <input
+              value={scheduleText}
+              aria-label="新的提醒"
+              placeholder="例如：明天早上 9 点提醒我喝水"
+              onChange={(event) => setScheduleText(event.target.value)}
+            />
+          </label>
+          <button
+            type="submit"
+            className={styles['dsh-companion-settings-card__submit']}
+            disabled={scheduleText.trim() === '' || scheduleCreatePending || scheduleLoading || scheduleActionId !== null}
+          >
+            {scheduleCreatePending ? '新增中…' : '新增'}
+          </button>
+        </form>
+        {scheduleCreateError !== '' && (
+          <p role="alert" className={styles['dsh-companion-settings-card__error']}>
+            {scheduleCreateError}
+          </p>
+        )}
+        {schedules.length > 0 ? (
           <ul className={styles['dsh-companion-settings-card__list']}>
             {schedules.map((item) => (
               <li key={item.id} className={styles['dsh-companion-settings-card__item']} data-testid={`schedule-item-${item.id}`}>
@@ -430,14 +520,14 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
                 <div className={styles['dsh-companion-settings-card__item-actions']}>
                   <button
                     type="button"
-                    disabled={scheduleActionId === item.id}
+                    disabled={scheduleActionId === item.id || scheduleLoading || scheduleCreatePending}
                     onClick={() => void onScheduleAction(item, item.enabled ? 'disable' : 'enable')}
                   >
                     {item.enabled ? '停用' : '启用'}
                   </button>
                   <button
                     type="button"
-                    disabled={scheduleActionId === item.id}
+                    disabled={scheduleActionId === item.id || scheduleLoading || scheduleCreatePending}
                     onClick={() => void onScheduleAction(item, 'delete')}
                   >
                     删除
@@ -446,7 +536,31 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
               </li>
             ))}
           </ul>
-        )}
+        ) : loadState === 'ready' ? (
+          <p className={styles['dsh-companion-settings-card__hint']}>暂无事件提醒</p>
+        ) : null}
+        <div className={styles['dsh-companion-settings-card__pagination']}>
+          <button
+            type="button"
+            className={styles['dsh-companion-settings-card__pagination-button']}
+            aria-label="上一页"
+            disabled={schedulePage <= 1 || scheduleLoading || scheduleActionId !== null || scheduleCreatePending}
+            onClick={() => onSchedulePage(schedulePage - 1)}
+          >
+            上一页
+          </button>
+          <span className={styles['dsh-companion-settings-card__pagination-summary']}>第 {schedulePage} / {scheduleTotalPages} 页</span>
+          <span className={styles['dsh-companion-settings-card__pagination-summary']}>共 {scheduleTotal} 条</span>
+          <button
+            type="button"
+            className={styles['dsh-companion-settings-card__pagination-button']}
+            aria-label="下一页"
+            disabled={schedulePage >= scheduleTotalPages || scheduleLoading || scheduleActionId !== null || scheduleCreatePending}
+            onClick={() => onSchedulePage(schedulePage + 1)}
+          >
+            下一页
+          </button>
+        </div>
       </section>
     </div>
   );
