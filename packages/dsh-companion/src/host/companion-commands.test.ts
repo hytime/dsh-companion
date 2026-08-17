@@ -57,7 +57,13 @@ describe('checkAuthStatus', () => {
 });
 
 describe('loginWithCredentials', () => {
-  it('经 script 伪终端调用 hyc login,input 喂入 账号\\n密码\\n,退出 0 → ok:true', async () => {
+  it('注入 PTY runner 时直接向 hyc login 伪终端写入账号和密码', async () => {
+    const ptyRun = vi.fn(async () => ({ status: 0, stdout: '{"ok":true}' }));
+    await expect(loginWithCredentials('hytime', 'secret', { ptyRun })).resolves.toEqual({ ok: true });
+    expect(ptyRun).toHaveBeenCalledWith('login', 'hytime\nsecret\n');
+  });
+
+  it('script 伪终端调用 hyc login,input 喂入 账号\\n密码\\n,退出 0 → ok:true', async () => {
     const calls: Array<[string, string[], unknown]> = [];
     const run = (cmd: string, args: string[], options?: { input?: string }) => {
       calls.push([cmd, args, options]);

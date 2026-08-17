@@ -44,12 +44,14 @@ import {
 } from './settings-store';
 import {
   checkAuthStatus,
+  COMMAND_TIMEOUT_MS,
   listSchedules,
   loginWithCredentials,
   logout,
   registerWithCredentials,
   scheduleAction,
   scheduleUnderstand,
+  type CredentialPtyRun,
   type CommandResult,
   type ScheduleListResult,
 } from './companion-commands';
@@ -87,6 +89,8 @@ declare module '@deepseek-ai/cordis' {
 
 /** 插件身份标识（对齐「第一个插件」教程的 name 导出）。 */
 export const name = 'dsh-companion';
+/** Credential 登录/注册使用 DSH 提供的真实 PTY。 */
+export const inject = ['subprocess'];
 
 export interface TravelNoteCompanionHostOptions {
   /** 鲸鱼娘资源根目录（默认走 travel-note-agent 仓库相对路径）。 */
@@ -106,6 +110,73 @@ interface ShellService {
     stdout: { text: string };
     stderr: { text: string };
   }>;
+}
+
+interface CredentialTerminalHandle {
+  output: AsyncIterable<Uint8Array | string>;
+  done: Promise<{ exitCode: number | null; signal: unknown }>;
+  write(data: string): Promise<void>;
+  terminate(): Promise<void>;
+}
+
+interface CredentialSubprocessService {
+  spawnTerminal(spec: {
+    argv: readonly string[];
+    cwd: string;
+    rows: number;
+    cols: number;
+    graceMs: number;
+  }): Promise<CredentialTerminalHandle>;
+}
+
+/** DSH PTY credential runner：避免 script 在 RPC socket/pipe stdin 上调用 tcgetattr。 */
+export function createCredentialPtyRunner(ctx: Context): CredentialPtyRun {
+  return async (command, input) => {
+    const subprocess = ctx.get('subprocess') as unknown as CredentialSubprocessService | undefined;
+    if (subprocess === undefined) {
+      return { error: new Error('DSH subprocess PTY service unavailable') };
+    }
+    let terminal: CredentialTerminalHandle | undefined;
+    let outputDone: Promise<void> | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      terminal = await subprocess.spawnTerminal({
+        argv: ['hyc', command],
+        cwd: process.cwd(),
+        rows: 24,
+        cols: 120,
+        graceMs: 3_000,
+      });
+      const chunks: string[] = [];
+      const decoder = new TextDecoder();
+      outputDone = (async () => {
+        for await (const chunk of terminal!.output) {
+          chunks.push(typeof chunk === 'string' ? chunk : decoder.decode(chunk));
+        }
+      })();
+      await terminal.write(input);
+      const outcome = await Promise.race([
+        terminal.done,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => {
+            const error = new Error(`hyc ${command} PTY timed out after ${COMMAND_TIMEOUT_MS}ms`) as NodeJS.ErrnoException;
+            error.code = 'ETIMEDOUT';
+            reject(error);
+          }, COMMAND_TIMEOUT_MS);
+        }),
+      ]);
+      await outputDone;
+      return { status: outcome.exitCode, stdout: chunks.join('') };
+    } catch (error) {
+      return { error };
+    } finally {
+      if (timeout !== undefined) clearTimeout(timeout);
+      if (terminal !== undefined) {
+        await terminal.terminate().catch(() => {});
+        await outputDone?.catch(() => {});
+      }
+    }
+  };
 }
 
 interface WebServerService {
@@ -241,18 +312,21 @@ export function scheduleInitialPushes(
 }
 
 /** CompanionRemote 缺省依赖：真实 store + 真实命令（测试注入替身）。 */
-const DEFAULT_RPC_DEPS: SettingsRpcDeps = {
-  store: { readSettings, writeSettings },
-  commands: {
-    checkAuthStatus,
-    loginWithCredentials,
-    registerWithCredentials,
-    logout,
-    listSchedules,
-    scheduleAction,
-    scheduleUnderstand,
-  },
-};
+function createDefaultRpcDeps(ctx: Context): SettingsRpcDeps {
+  const ptyRun = createCredentialPtyRunner(ctx);
+  return {
+    store: { readSettings, writeSettings },
+    commands: {
+      checkAuthStatus,
+      loginWithCredentials: (username, password) => loginWithCredentials(username, password, { ptyRun }),
+      registerWithCredentials: (username, password) => registerWithCredentials(username, password, { ptyRun }),
+      logout,
+      listSchedules,
+      scheduleAction,
+      scheduleUnderstand,
+    },
+  };
+}
 
 export class CompanionRemote extends TypertRemoteService {
   private currentStatus: StatusUpdate = { status: 'idle' };
@@ -266,9 +340,9 @@ export class CompanionRemote extends TypertRemoteService {
   /** companion.* 配置 RPC handler 表(注入 store/commands,方法与 @Remote 同名)。 */
   private readonly settingsHandlers: SettingsRpcHandlers;
 
-  constructor(ctx: Context, deps: SettingsRpcDeps = DEFAULT_RPC_DEPS) {
+  constructor(ctx: Context, deps?: SettingsRpcDeps) {
     super(ctx, REMOTE_SERVICE);
-    this.settingsHandlers = createSettingsHandlers(deps);
+    this.settingsHandlers = createSettingsHandlers(deps ?? createDefaultRpcDeps(ctx));
   }
 
   /** 注入配置快照（apply 启动读取 / setConfig 成功后重读）。 */

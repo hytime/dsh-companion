@@ -48,6 +48,9 @@ export interface RunOptions {
 
 export type RunCmd = (cmd: string, args: string[], options?: RunOptions) => RunResult;
 
+/** DSH PTY credential runner：command 是 login/register，input 是逐行账号密码。 */
+export type CredentialPtyRun = (command: 'login' | 'register', input: string) => Promise<RunResult>;
+
 export interface CommandResult {
   ok: boolean;
   error?: string;
@@ -161,11 +164,19 @@ async function runCredentialCommand(
   username: string,
   password: string,
   run: RunCmd,
+  ptyRun?: CredentialPtyRun,
 ): Promise<CommandResult> {
   // register 额外有「确认密码」提示，需要第三行输入（密码喂两次）。
   const input =
     command === 'register' ? `${username}\n${password}\n${password}\n` : `${username}\n${password}\n`;
-  const result = runOrCatch(run, 'script', ['-q', '/dev/null', 'hyc', command], { input });
+  let result: RunResult;
+  try {
+    result = ptyRun !== undefined
+      ? await ptyRun(command, input)
+      : runOrCatch(run, 'script', ['-q', '/dev/null', 'hyc', command], { input });
+  } catch (error) {
+    result = { error };
+  }
   if (isEnoent(result)) return { ok: false, error: PLATFORM_UNSUPPORTED_LOGIN };
   if (result.error) return { ok: false, error: passthroughError(result) };
   if (result.status !== 0) return { ok: false, error: passthroughError(result) };
@@ -178,18 +189,18 @@ async function runCredentialCommand(
 export async function loginWithCredentials(
   username: string,
   password: string,
-  options: { run?: RunCmd } = {},
+  options: { run?: RunCmd; ptyRun?: CredentialPtyRun } = {},
 ): Promise<CommandResult> {
-  return runCredentialCommand('login', username, password, options.run ?? defaultRun);
+  return runCredentialCommand('login', username, password, options.run ?? defaultRun, options.ptyRun);
 }
 
 /** 页面内注册：`script -q /dev/null hyc register` 喂入 账号/密码/确认密码。 */
 export async function registerWithCredentials(
   username: string,
   password: string,
-  options: { run?: RunCmd } = {},
+  options: { run?: RunCmd; ptyRun?: CredentialPtyRun } = {},
 ): Promise<CommandResult> {
-  return runCredentialCommand('register', username, password, options.run ?? defaultRun);
+  return runCredentialCommand('register', username, password, options.run ?? defaultRun, options.ptyRun);
 }
 
 /** 登出：`hyc logout`（清除当前 profile 的已保存 JWT）。 */

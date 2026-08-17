@@ -14,6 +14,7 @@ import {
   buddyPollIntervalMs,
   CompanionRemote,
   createBuddyTimer,
+  createCredentialPtyRunner,
   registerAlternateProtocolMarkers,
   scheduleInitialPushes,
   selectPushChannels,
@@ -109,6 +110,29 @@ function makeCtx(shell?: { resolve: ReturnType<typeof vi.fn>; run: ReturnType<ty
     get: (name: string): unknown => (name === 'shell' ? shell : undefined),
   } as unknown as Context;
 }
+
+it('credential PTY runner 用真实终端写入输入并收集输出后清理', async () => {
+  let input = '';
+  const terminate = vi.fn(async () => {});
+  const spawnTerminal = vi.fn(async (spec: { argv: readonly string[]; cwd: string; rows: number; cols: number; graceMs: number }) => {
+    expect(spec.argv).toEqual(['hyc', 'login']);
+    expect(spec.rows).toBeGreaterThan(0);
+    expect(spec.cols).toBeGreaterThan(0);
+    return {
+      output: (async function* () { yield '{"ok":true}'; })(),
+      done: Promise.resolve({ exitCode: 0, signal: null }),
+      write: async (value: string) => { input = value; },
+      terminate,
+    };
+  });
+  const ctx = {
+    get: (name: string): unknown => name === 'subprocess' ? { spawnTerminal } : undefined,
+  } as unknown as Context;
+  const run = createCredentialPtyRunner(ctx);
+  await expect(run('login', 'hytime\nsecret\n')).resolves.toEqual({ status: 0, stdout: '{"ok":true}' });
+  expect(input).toBe('hytime\nsecret\n');
+  expect(terminate).toHaveBeenCalledTimes(1);
+});
 
 function makeRemote(options: {
   shell?: { resolve: ReturnType<typeof vi.fn>; run: ReturnType<typeof vi.fn> };
