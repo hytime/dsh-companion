@@ -253,6 +253,27 @@ describe('SettingsCard', () => {
     expect(input).toHaveValue('一条无法理解的提醒');
   });
 
+  it('任务卡片显示配置时间、中文重复规则、未知规则和消息', async () => {
+    const displaySchedules = [
+      { ...SCHEDULES[0]!, timeOfDay: '09:00', repeatRule: 'daily', message: '早上喝水' },
+      { ...SCHEDULES[1]!, timeOfDay: '18:30', repeatRule: 'monthly', message: '月底复盘' },
+      { ...SCHEDULES[0]!, id: 'once', timeOfDay: '20:00', repeatRule: 'once', message: '' },
+      { ...SCHEDULES[0]!, id: 'unknown', timeOfDay: '07:30', repeatRule: 'custom_rule', message: '保留未知规则' },
+    ];
+    const remote = createRemote({
+      listSchedules: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, items: displaySchedules } })),
+    });
+    renderCard(remote);
+    await screen.findByText('09:00 · 每天');
+    expect(screen.getByText('18:30 · 每月')).toBeInTheDocument();
+    expect(screen.getByText('20:00 · 一次')).toBeInTheDocument();
+    expect(screen.getByText('07:30 · custom_rule')).toBeInTheDocument();
+    expect(screen.getByText('早上喝水')).toBeInTheDocument();
+    expect(screen.getByText('月底复盘')).toBeInTheDocument();
+    expect(screen.getByLabelText('提醒间隔(分钟)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '保存提醒' })).toBeInTheDocument();
+  });
+
   it('事件提醒:渲染开关/间隔输入/事件列表(2 项),启停/删除按钮调用对应方法', async () => {
     const remote = createRemote({
       listSchedules: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, items: SCHEDULES } })),

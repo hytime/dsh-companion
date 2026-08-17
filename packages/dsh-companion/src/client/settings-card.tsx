@@ -34,6 +34,18 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 const SCHEDULE_PAGE_SIZE = 5;
 
+const REPEAT_LABEL: Record<string, string> = {
+  once: '一次',
+  daily: '每天',
+  monthly: '每月',
+  weekdays: '工作日',
+  weekends: '周末',
+};
+
+function scheduleMeta(item: ScheduleItem): string {
+  return `${item.timeOfDay} · ${REPEAT_LABEL[item.repeatRule] ?? item.repeatRule}`;
+}
+
 export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   const { remote } = props;
 
@@ -513,7 +525,13 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
           <ul className={styles['dsh-companion-settings-card__list']}>
             {schedules.map((item) => (
               <li key={item.id} className={styles['dsh-companion-settings-card__item']} data-testid={`schedule-item-${item.id}`}>
-                <span className={styles['dsh-companion-settings-card__item-title']}>{item.title}</span>
+                <div className={styles['dsh-companion-settings-card__item-details']}>
+                  <span className={styles['dsh-companion-settings-card__item-title']}>{item.title}</span>
+                  <span className={styles['dsh-companion-settings-card__item-meta']}>{scheduleMeta(item)}</span>
+                  {item.message !== '' ? (
+                    <span className={styles['dsh-companion-settings-card__item-message']}>{item.message}</span>
+                  ) : null}
+                </div>
                 <span className={styles['dsh-companion-settings-card__hint']}>
                   {item.enabled ? '已启用' : '已停用'}
                 </span>
