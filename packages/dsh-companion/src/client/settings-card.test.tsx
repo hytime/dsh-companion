@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -131,6 +133,38 @@ describe('SettingsCard', () => {
     expect(await screen.findByText('已登录')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '退出登录' })).toBeInTheDocument();
     expect(remote.login).toHaveBeenCalledWith('alice', 'correct-password');
+  });
+
+  it('新的提醒表单保持横向布局，输入和新增按钮在同一行', async () => {
+    renderCard(createRemote());
+    const input = await screen.findByLabelText('新的提醒');
+    const form = input.closest('form');
+    expect(form).not.toBeNull();
+    expect(form?.className).toContain('dsh-companion-settings-card__schedule-create');
+    expect(form?.querySelector('input[aria-label="新的提醒"]')).toBe(input);
+    expect(form?.querySelector('button[type="submit"]')).not.toBeNull();
+    const css = readFileSync(resolve(__dirname, '../styles/companion.module.css'), 'utf8');
+    expect(css).toContain('.dsh-companion-settings-card__section form:not(.dsh-companion-settings-card__schedule-create)');
+  });
+
+  it('提醒列表请求失败时仍回显成功读取的旅伴名称和用户称呼', async () => {
+    const remote = createRemote({
+      getConfig: vi.fn(async () => ({
+        ok: true as const,
+        value: {
+          ok: true as const,
+          ...DEFAULT_SETTINGS,
+          companionName: '小小梦',
+          userCallName: '伟大的造物主',
+        },
+      })),
+      listSchedules: vi.fn(async () => {
+        throw new Error('schedule endpoint unavailable');
+      }),
+    });
+    renderCard(remote);
+    await waitFor(() => expect(screen.getByLabelText('旅伴名称')).toHaveValue('小小梦'));
+    expect(screen.getByLabelText('对你的称呼')).toHaveValue('伟大的造物主');
   });
 
   it('基本配置:渲染名称/称呼输入框与两个开关,保存调用 remote.setConfig({...})', async () => {

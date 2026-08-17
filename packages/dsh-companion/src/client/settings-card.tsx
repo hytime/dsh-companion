@@ -131,13 +131,21 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
 
   React.useEffect(() => {
     let active = true;
-    Promise.all([remote.getConfig(), remote.authStatus(), remote.listSchedules(1, SCHEDULE_PAGE_SIZE)])
-      .then(([cfg, auth, list]) => {
-        if (!active) return;
-        const errors: string[] = [];
+    const requests = [
+      Promise.resolve().then(() => remote.getConfig()),
+      Promise.resolve().then(() => remote.authStatus()),
+      Promise.resolve().then(() => remote.listSchedules(1, SCHEDULE_PAGE_SIZE)),
+    ] as const;
+    Promise.allSettled(requests).then(([cfgResult, authResult, listResult]) => {
+      if (!active) return;
+      const errors: string[] = [];
+      if (cfgResult.status === 'fulfilled') {
+        const cfg = cfgResult.value;
         if (!cfg.ok) {
-          errors.push('读取配置失败');
-        } else if (cfg.value.ok) {
+          errors.push(cfg.error.message);
+        } else if (!cfg.value.ok) {
+          errors.push(cfg.value.error || '读取配置失败');
+        } else {
           setConfig(cfg.value);
           setCompanionName(cfg.value.companionName);
           setUserCallName(cfg.value.userCallName);
@@ -145,27 +153,32 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
           setShowBubble(cfg.value.showBubble);
           setReminderEnabled(cfg.value.reminderEnabled);
           setReminderIntervalMin(cfg.value.reminderIntervalMin);
-        } else {
-          errors.push(cfg.value.error || '读取配置失败');
         }
+      } else {
+        errors.push('读取配置失败');
+      }
+      if (authResult.status === 'fulfilled') {
+        const auth = authResult.value;
         if (auth.ok && auth.value.ok) setAuthStatus(auth.value.status);
-        else errors.push('读取认证状态失败');
+        else errors.push(auth.ok ? '读取认证状态失败' : auth.error.message);
+      } else {
+        errors.push('读取认证状态失败');
+      }
+      if (listResult.status === 'fulfilled') {
+        const list = listResult.value;
         if (list.ok && list.value.ok) applyScheduleResult(list.value, 1);
-        else errors.push('读取事件列表失败');
-        setScheduleLoading(false);
-        setLoadState(errors.length === 0 ? 'ready' : 'error');
-        setLoadError(errors.join('；'));
-      })
-      .catch(() => {
-        if (!active) return;
-        setLoadState('error');
-        setLoadError('加载失败');
-        setScheduleLoading(false);
-      });
+        else errors.push(list.ok ? '读取事件列表失败' : list.error.message);
+      } else {
+        errors.push('读取事件列表失败');
+      }
+      setScheduleLoading(false);
+      setLoadState(errors.length === 0 ? 'ready' : 'error');
+      setLoadError(errors.join('；'));
+    });
     return () => {
       active = false;
     };
-  }, [remote]);
+  }, [applyScheduleResult, remote]);
 
   // ---- 账号：前端校验 + 提交 ----
   const onSubmitAuth = async (event: React.FormEvent): Promise<void> => {
