@@ -15,6 +15,10 @@ import {
   BUDDY_ENDPOINT_ID,
   BUDDY_METHOD,
   BUDDY_RESULT_SYMBOL,
+  CREATE_SCHEDULE_ENDPOINT_ID,
+  CREATE_SCHEDULE_METHOD,
+  CREATE_SCHEDULE_RESULT_SYMBOL,
+  CREATE_SCHEDULE_TEXT_SYMBOL,
   DELETE_SCHEDULE_ENDPOINT_ID,
   DELETE_SCHEDULE_ID_SYMBOL,
   DELETE_SCHEDULE_METHOD,
@@ -35,6 +39,8 @@ import {
   LATEST_REPLY_RESULT_SYMBOL,
   LIST_SCHEDULES_ENDPOINT_ID,
   LIST_SCHEDULES_METHOD,
+  LIST_SCHEDULES_PAGE_SIZE_SYMBOL,
+  LIST_SCHEDULES_PAGE_SYMBOL,
   LIST_SCHEDULES_RESULT_SYMBOL,
   LOGIN_ENDPOINT_ID,
   LOGIN_METHOD,
@@ -316,7 +322,14 @@ const scheduleListResult = schema<ScheduleListResult>((value) => {
     return { ok: false as const, ...(typeof record.error === 'string' ? { error: record.error } : {}) };
   }
   if (!Array.isArray(record.items)) throw new TypeError('expected items');
-  return { ok: true as const, items: record.items.map((item) => scheduleItem.parse(item)) };
+  return {
+    ok: true as const,
+    items: record.items.map((item) => scheduleItem.parse(item)),
+    ...(typeof record.page === 'number' ? { page: record.page } : {}),
+    ...(typeof record.pageSize === 'number' ? { pageSize: record.pageSize } : {}),
+    ...(typeof record.total === 'number' ? { total: record.total } : {}),
+    ...(typeof record.totalPages === 'number' ? { totalPages: record.totalPages } : {}),
+  };
 });
 
 const authStatusDescriptor: InvocationDescriptor = {
@@ -393,8 +406,23 @@ const listSchedulesDescriptor: InvocationDescriptor = {
   namespace: REMOTE_NAMESPACE,
   method: LIST_SCHEDULES_METHOD,
   invocation: { kind: 'direct' },
-  parameters: [],
+  parameters: [
+    { name: 'page', wire: 'page', source: 'json', acceptsUndefined: true, codec: { mode: 'strict', typeSymbol: LIST_SCHEDULES_PAGE_SYMBOL, schema: schema<number>((value) => requireNumber(value, 'page')) } as TypertCodec },
+    { name: 'pageSize', wire: 'pageSize', source: 'json', acceptsUndefined: true, codec: { mode: 'strict', typeSymbol: LIST_SCHEDULES_PAGE_SIZE_SYMBOL, schema: schema<number>((value) => requireNumber(value, 'pageSize')) } as TypertCodec },
+  ],
   result: { mode: 'strict', typeSymbol: LIST_SCHEDULES_RESULT_SYMBOL, schema: scheduleListResult } as TypertCodec,
+};
+
+const createScheduleDescriptor: InvocationDescriptor = {
+  id: CREATE_SCHEDULE_ENDPOINT_ID,
+  service: REMOTE_SERVICE,
+  namespace: REMOTE_NAMESPACE,
+  method: CREATE_SCHEDULE_METHOD,
+  invocation: { kind: 'direct' },
+  parameters: [
+    { name: 'text', wire: 'text', source: 'json', codec: { mode: 'strict', typeSymbol: CREATE_SCHEDULE_TEXT_SYMBOL, schema: stringSchema } as TypertCodec },
+  ],
+  result: { mode: 'strict', typeSymbol: CREATE_SCHEDULE_RESULT_SYMBOL, schema: okResultSchema } as TypertCodec,
 };
 
 function scheduleActionDescriptor(
@@ -451,6 +479,7 @@ export const travelNoteCompanionRemote: TypertRemoteContribution = {
     getConfigDescriptor,
     setConfigDescriptor,
     listSchedulesDescriptor,
+    createScheduleDescriptor,
     enableScheduleDescriptor,
     disableScheduleDescriptor,
     deleteScheduleDescriptor,

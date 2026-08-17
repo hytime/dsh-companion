@@ -16,9 +16,9 @@ import type {
  * 本模块不接触 ctx / 网络 / 终端,store 与 commands 全部注入。
  *
  * 约定:
- * - handler 表恰好 10 个方法名(authStatus / login / register / logout /
- *   getConfig / setConfig / listSchedules / enableSchedule / disableSchedule /
- *   deleteSchedule),与 Client 侧 remote-contract 的 companion.* 方法一一对应。
+ * - handler 表恰好 11 个方法名(authStatus / login / register / logout /
+ *   getConfig / setConfig / listSchedules / createSchedule / enableSchedule /
+ *   disableSchedule / deleteSchedule),与 Client 侧 remote-contract 的 companion.* 方法一一对应。
  * - 所有 handler 返回 `{ ok, ...data, error? }` 信封,绝不抛出;
  *   依赖抛出的异常统一折叠为 `{ ok:false, error }`。
  * - 方法参数形状对齐远程调用语义:login/register 收 `{username,password}`,
@@ -36,7 +36,8 @@ export interface SettingsRpcDeps {
     loginWithCredentials(username: string, password: string, options?: { run?: RunCmd }): Promise<CommandResult>;
     registerWithCredentials(username: string, password: string, options?: { run?: RunCmd }): Promise<CommandResult>;
     logout(options?: { run?: RunCmd }): Promise<CommandResult>;
-    listSchedules(options?: { run?: RunCmd }): Promise<ScheduleListResult>;
+    listSchedules(options?: { page?: number; pageSize?: number; run?: RunCmd }): Promise<ScheduleListResult>;
+  scheduleUnderstand(text: string, options?: { run?: RunCmd }): Promise<CommandResult>;
     scheduleAction(action: ScheduleAction, id: string, options?: { run?: RunCmd }): Promise<CommandResult>;
   };
 }
@@ -53,7 +54,8 @@ export interface SettingsRpcHandlers {
   logout(): Promise<CommandResult>;
   getConfig(): Promise<GetConfigResult>;
   setConfig(partial: Partial<CompanionSettings>): Promise<WriteResult>;
-  listSchedules(): Promise<ScheduleListResult>;
+  listSchedules(args?: { page?: number; pageSize?: number }): Promise<ScheduleListResult>;
+  createSchedule(args: { text: string }): Promise<CommandResult>;
   enableSchedule(args: { id: string }): Promise<CommandResult>;
   disableSchedule(args: { id: string }): Promise<CommandResult>;
   deleteSchedule(args: { id: string }): Promise<CommandResult>;
@@ -90,7 +92,8 @@ export function createSettingsHandlers(deps: SettingsRpcDeps): SettingsRpcHandle
         ...(await deps.store.readSettings()),
       })),
     setConfig: (partial) => safeResult(() => deps.store.writeSettings(partial)),
-    listSchedules: () => safeResult(() => deps.commands.listSchedules()),
+    listSchedules: (args = {}) => safeResult(() => deps.commands.listSchedules(args)),
+    createSchedule: ({ text }) => safeResult(() => deps.commands.scheduleUnderstand(text)),
     enableSchedule: ({ id }) => safeResult(() => deps.commands.scheduleAction('enable', id)),
     disableSchedule: ({ id }) => safeResult(() => deps.commands.scheduleAction('disable', id)),
     deleteSchedule: ({ id }) => safeResult(() => deps.commands.scheduleAction('delete', id)),

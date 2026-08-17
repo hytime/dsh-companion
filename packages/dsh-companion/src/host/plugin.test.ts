@@ -96,6 +96,7 @@ function makeFakeDeps(): SettingsRpcDeps {
       registerWithCredentials: vi.fn().mockResolvedValue({ ok: true }),
       logout: vi.fn().mockResolvedValue({ ok: true }),
       listSchedules: vi.fn().mockResolvedValue({ ok: true, items: [] }),
+      scheduleUnderstand: vi.fn().mockResolvedValue({ ok: true }),
       scheduleAction: vi.fn().mockResolvedValue({ ok: true }),
     },
   };
@@ -390,6 +391,14 @@ describe('CompanionRemote 配置消费集成', () => {
     await expect(remote.latestReply()).resolves.toBeNull();
   });
 
+  it('createSchedule:把自然语言文本透传给 handler', async () => {
+    const deps = makeFakeDeps();
+    deps.commands.scheduleUnderstand = vi.fn().mockResolvedValue({ ok: true });
+    const remote = makeRemote({ deps });
+    await expect(remote.createSchedule('明天早上九点提醒我喝水')).resolves.toEqual({ ok: true });
+    expect(deps.commands.scheduleUnderstand).toHaveBeenCalledWith('明天早上九点提醒我喝水');
+  });
+
   it('setConfig:写入成功 → 触发 onConfigApplied(host 据此重读配置并推送新状态)', async () => {
     const deps = makeFakeDeps();
     const remote = makeRemote({ deps });
@@ -446,7 +455,7 @@ describe('apply(启动路径:初始 readSettings 完成后 restart 重建定时�
 });
 
 describe('registerAlternateProtocolMarkers(双表注册:备选实例镜像标记)', () => {
-  it('把 14 个 @Remote 标记镜像写入另一协议实例的私有标记表', async () => {
+  it('把 15 个 @Remote 标记镜像写入另一协议实例的私有标记表', async () => {
     // 备选实例:同一协议库经带 query 的 file URL 再加载一次,得到与主导入
     // 不同的模块实例(私有标记表独立)——等价于开发模式 src/lib 双实例分裂。
     const { createRequire } = await import('node:module');
@@ -464,7 +473,7 @@ describe('registerAlternateProtocolMarkers(双表注册:备选实例镜像标记
     const methods = alternate.remoteMethods(probe).map((m) => m.method);
     expect(methods).toEqual([
       'status', 'buddy', 'latestReply', 'asset', 'authStatus', 'login', 'register', 'logout',
-      'getConfig', 'setConfig', 'listSchedules', 'enableSchedule', 'disableSchedule', 'deleteSchedule',
+      'getConfig', 'setConfig', 'listSchedules', 'createSchedule', 'enableSchedule', 'disableSchedule', 'deleteSchedule',
     ]);
   });
 });

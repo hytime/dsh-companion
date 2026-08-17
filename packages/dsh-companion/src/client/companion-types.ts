@@ -66,6 +66,10 @@ export interface ScheduleItem {
 export interface ScheduleListResult {
   ok: boolean;
   items?: ScheduleItem[];
+  page?: number;
+  pageSize?: number;
+  total?: number;
+  totalPages?: number;
   error?: string;
 }
 
@@ -102,7 +106,8 @@ export interface CompanionRemoteFace {
   logout(): Promise<RemoteResult<CommandResult>>;
   getConfig(): Promise<RemoteResult<GetConfigResult>>;
   setConfig(partial: Partial<CompanionSettings>): Promise<RemoteResult<WriteResult>>;
-  listSchedules(): Promise<RemoteResult<ScheduleListResult>>;
+  listSchedules(page?: number, pageSize?: number): Promise<RemoteResult<ScheduleListResult>>;
+  createSchedule(text: string): Promise<RemoteResult<CommandResult>>;
   enableSchedule(id: string): Promise<RemoteResult<CommandResult>>;
   disableSchedule(id: string): Promise<RemoteResult<CommandResult>>;
   deleteSchedule(id: string): Promise<RemoteResult<CommandResult>>;

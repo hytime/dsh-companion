@@ -58,6 +58,7 @@ function createRemote(overrides: Partial<CompanionRemoteFace> = {}): CompanionRe
     getConfig: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, ...DEFAULT_SETTINGS } })),
     setConfig: vi.fn(async () => ({ ok: true as const, value: { ok: true as const } })),
     listSchedules: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, items: [] } })),
+    createSchedule: vi.fn(async () => ({ ok: true as const, value: { ok: true as const } })),
     enableSchedule: vi.fn(async () => ({ ok: true as const, value: { ok: true as const } })),
     disableSchedule: vi.fn(async () => ({ ok: true as const, value: { ok: true as const } })),
     deleteSchedule: vi.fn(async () => ({ ok: true as const, value: { ok: true as const } })),

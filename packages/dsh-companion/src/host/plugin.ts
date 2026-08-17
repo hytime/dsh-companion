@@ -49,6 +49,7 @@ import {
   logout,
   registerWithCredentials,
   scheduleAction,
+  scheduleUnderstand,
   type CommandResult,
   type ScheduleListResult,
 } from './companion-commands';
@@ -249,6 +250,7 @@ const DEFAULT_RPC_DEPS: SettingsRpcDeps = {
     logout,
     listSchedules,
     scheduleAction,
+    scheduleUnderstand,
   },
 };
 
@@ -478,10 +480,16 @@ export class CompanionRemote extends TypertRemoteService {
     return result;
   }
 
-  /** 列出定时陪伴事件(hyc schedule list)。 */
+  /** 列出定时陪伴事件(hyc schedule list)，可选透传分页参数。 */
   @Remote
-  async listSchedules(): Promise<ScheduleListResult> {
-    return this.settingsHandlers.listSchedules();
+  async listSchedules(page?: number, pageSize?: number): Promise<ScheduleListResult> {
+    return this.settingsHandlers.listSchedules({ page, pageSize });
+  }
+
+  /** 通过自然语言创建定时事件(hyc schedule understand --text)。 */
+  @Remote
+  async createSchedule(text: string): Promise<CommandResult> {
+    return this.settingsHandlers.createSchedule({ text });
   }
 
   /** 启用定时事件(hyc schedule enable --id)。 */
@@ -503,10 +511,10 @@ export class CompanionRemote extends TypertRemoteService {
   }
 }
 
-/** 14 个 @Remote 公开方法名（与类中装饰器一一对应）。 */
+/** 15 个 @Remote 公开方法名（与类中装饰器一一对应）。 */
 const REMOTE_METHOD_NAMES = [
   'status', 'buddy', 'latestReply', 'asset', 'authStatus', 'login', 'register', 'logout',
-  'getConfig', 'setConfig', 'listSchedules', 'enableSchedule', 'disableSchedule', 'deleteSchedule',
+  'getConfig', 'setConfig', 'listSchedules', 'createSchedule', 'enableSchedule', 'disableSchedule', 'deleteSchedule',
 ] as const;
 
 /**

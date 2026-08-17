@@ -36,6 +36,7 @@ function makeDeps(overrides: {
       registerWithCredentials: vi.fn().mockResolvedValue({ ok: true }),
       logout: vi.fn().mockResolvedValue({ ok: true }),
       listSchedules: vi.fn().mockResolvedValue({ ok: true, items: [] }),
+      scheduleUnderstand: vi.fn().mockResolvedValue({ ok: true }),
       scheduleAction: vi.fn().mockResolvedValue({ ok: true }),
       ...overrides.commands,
     },
@@ -43,7 +44,7 @@ function makeDeps(overrides: {
 }
 
 describe('createSettingsHandlers', () => {
-  it('返回的 handler 表包含全部 10 个方法名,每个都是函数', () => {
+  it('返回的 handler 表包含全部 11 个方法名,每个都是函数', () => {
     const handlers = createSettingsHandlers(makeDeps());
     const expected = [
       'authStatus',
@@ -53,6 +54,7 @@ describe('createSettingsHandlers', () => {
       'getConfig',
       'setConfig',
       'listSchedules',
+      'createSchedule',
       'enableSchedule',
       'disableSchedule',
       'deleteSchedule',
@@ -154,13 +156,31 @@ describe('createSettingsHandlers', () => {
     expect(result).toEqual({ ok: false, error: 'EACCES: permission denied' });
   });
 
-  it('listSchedules 透传 commands.listSchedules 的 { ok:true, items }', async () => {
+  it('listSchedules 透传分页参数并保留 commands.listSchedules 的分页信封', async () => {
     const deps = makeDeps({
-      commands: { listSchedules: vi.fn().mockResolvedValue({ ok: true, items: [item] }) },
+      commands: {
+        listSchedules: vi.fn().mockResolvedValue({ ok: true, items: [item], page: 2, pageSize: 5, total: 11, totalPages: 3 }),
+      },
     });
     const handlers = createSettingsHandlers(deps);
-    await expect(handlers.listSchedules()).resolves.toEqual({ ok: true, items: [item] });
-    expect(deps.commands.listSchedules).toHaveBeenCalledTimes(1);
+    await expect(handlers.listSchedules({ page: 2, pageSize: 5 })).resolves.toEqual({
+      ok: true,
+      items: [item],
+      page: 2,
+      pageSize: 5,
+      total: 11,
+      totalPages: 3,
+    });
+    expect(deps.commands.listSchedules).toHaveBeenCalledWith({ page: 2, pageSize: 5 });
+  });
+
+  it('createSchedule 透传自然语言文本给 commands.scheduleUnderstand', async () => {
+    const deps = makeDeps({
+      commands: { scheduleUnderstand: vi.fn().mockResolvedValue({ ok: true }) },
+    });
+    const handlers = createSettingsHandlers(deps);
+    await expect(handlers.createSchedule({ text: '明天早上九点提醒我喝水' })).resolves.toEqual({ ok: true });
+    expect(deps.commands.scheduleUnderstand).toHaveBeenCalledWith('明天早上九点提醒我喝水');
   });
 
   it.each(['enable', 'disable', 'delete'] as const)(
