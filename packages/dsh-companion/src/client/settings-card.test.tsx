@@ -270,8 +270,12 @@ describe('SettingsCard', () => {
     expect(screen.getByText('07:30 · custom_rule')).toBeInTheDocument();
     expect(screen.getByText('早上喝水')).toBeInTheDocument();
     expect(screen.getByText('月底复盘')).toBeInTheDocument();
+    expect(screen.getByText('09:00 · 每天').className).toContain('dsh-companion-settings-card__item-meta');
+    expect(screen.getByText('早上喝水').className).toContain('dsh-companion-settings-card__item-message');
     expect(screen.getByLabelText('提醒间隔(分钟)')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '保存提醒' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '保存提醒' }).parentElement?.parentElement?.className)
+      .toContain('dsh-companion-settings-card__reminder-settings');
   });
 
   it('事件提醒:渲染开关/间隔输入/事件列表(2 项),启停/删除按钮调用对应方法', async () => {

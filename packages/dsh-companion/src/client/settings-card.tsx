@@ -466,24 +466,26 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
           />
           <span className={styles['dsh-companion-settings-card__label']}>定时提醒</span>
         </label>
-        <label className={styles['dsh-companion-settings-card__field']}>
-          <span className={styles['dsh-companion-settings-card__label']}>提醒间隔(分钟)</span>
-          <input
-            type="number"
-            min={1}
-            value={reminderIntervalMin}
-            onChange={(event) => setReminderIntervalMin(Number(event.target.value))}
-          />
-        </label>
-        <div className={styles['dsh-companion-settings-card__actions']}>
-          <button
-            type="button"
-            className={styles['dsh-companion-settings-card__submit']}
-            disabled={reminderPending}
-            onClick={() => void onSaveReminder()}
-          >
-            {reminderPending ? '提交中…' : '保存提醒'}
-          </button>
+        <div className={styles['dsh-companion-settings-card__reminder-settings']}>
+          <label className={styles['dsh-companion-settings-card__field']}>
+            <span className={styles['dsh-companion-settings-card__label']}>提醒间隔(分钟)</span>
+            <input
+              type="number"
+              min={1}
+              value={reminderIntervalMin}
+              onChange={(event) => setReminderIntervalMin(Number(event.target.value))}
+            />
+          </label>
+          <div className={styles['dsh-companion-settings-card__actions']}>
+            <button
+              type="button"
+              className={styles['dsh-companion-settings-card__submit']}
+              disabled={reminderPending}
+              onClick={() => void onSaveReminder()}
+            >
+              {reminderPending ? '提交中…' : '保存提醒'}
+            </button>
+          </div>
         </div>
         {reminderError !== '' && (
           <p role="alert" className={styles['dsh-companion-settings-card__error']}>

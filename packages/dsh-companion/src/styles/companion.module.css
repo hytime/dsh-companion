@@ -478,6 +478,22 @@
   gap: 12px;
 }
 
+.dsh-companion-settings-card__reminder-settings {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.dsh-companion-settings-card__reminder-settings .dsh-companion-settings-card__field {
+  flex: 0 1 360px;
+}
+
+.dsh-companion-settings-card__reminder-settings .dsh-companion-settings-card__actions {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
 .dsh-companion-settings-card__schedule-create {
   display: flex;
   align-items: flex-end;
@@ -528,6 +544,15 @@
 }
 
 @media (max-width: 420px) {
+  .dsh-companion-settings-card__reminder-settings {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dsh-companion-settings-card__reminder-settings .dsh-companion-settings-card__field {
+    flex-basis: auto;
+  }
+
   .dsh-companion-settings-card__schedule-create {
     align-items: stretch;
     flex-direction: column;
@@ -549,7 +574,7 @@
 
 .dsh-companion-settings-card__item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   padding: 8px 10px;
   border: 1px solid var(--dsw-alias-border-l1);
@@ -557,13 +582,40 @@
   background: var(--dsw-alias-bg-layer-2);
 }
 
-.dsh-companion-settings-card__item-title {
+.dsh-companion-settings-card__item-details {
+  display: flex;
   flex: 1 1 auto;
   min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dsh-companion-settings-card__item-title {
+  min-width: 0;
+  overflow: hidden;
   font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-companion-settings-card__item-meta,
+.dsh-companion-settings-card__item-message {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-companion-settings-card__item-message {
+  color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary));
 }
 
 .dsh-companion-settings-card__item-actions {
   display: flex;
+  flex: 0 0 auto;
   gap: 6px;
 }
