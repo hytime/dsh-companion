@@ -39,6 +39,16 @@ dsh-companion/
 
 ---
 
+## Companion 源码边界
+
+`packages/dsh-companion/src/host/index.ts` 和 `src/client/index.tsx` 是双端构建入口；对应的 `plugin.ts` / `plugin.tsx` 只保留兼容 re-export。Host runtime 只做生命周期装配，具体职责分别位于 `host/remote/`、`host/transport/`、`host/schedules/`、`host/prerequisites/` 和 `host/status/`；Client runtime 装配 Remote、slot 和 stream，`client/slots/` 只注册 slot，`client/stream/` 只处理事件流。
+
+Client 的 React hooks 统一放在 `src/hooks/`（拖动、气泡、打字机），纯位置计算放在 `src/utils/widget-position.ts`；`src/components/` 统一放置所有展示组件。组件不直接创建 EventSource、访问 Remote 或持有 window 全局 listener。
+
+共享状态契约、状态 fallback、emotion/frame 映射应集中在 `contracts/companion-status.ts`；Client 只接收可序列化状态和 Remote 结果，不直接访问 Host Service、credentials、Session 或 live runtime 对象。Remote、SSE、HTTP 路由、定时器、事件桥接、slot、React view 与纯工具保持单一职责，业务实现文件原则上不超过 250 行。
+
+构建入口保持如下输出：Host `lib/types/host/index.js` → `lib/index.js`，Client `lib/types/client/index.js` → `lib/client.js`。插件更新必须按 tarball 流程验证，禁止用 `link:` 目录安装。
+
 ## 环境要求
 
 - Node.js >= 20

@@ -15,9 +15,9 @@
  */
 import * as React from 'react';
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
-import type { CompanionRemoteFace, CompanionSettings, ScheduleItem, ScheduleListResult } from './companion-types';
-import { DeepSeekLogo } from '../components/deepseek-logo';
-import type {} from './slot-contract';
+import type { CompanionRemoteFace, CompanionSettings, ScheduleItem, ScheduleListResult } from '../client/companion-types';
+import { DeepSeekLogo } from './deepseek-logo';
+import type {} from '../client/slot-contract';
 import styles from '../styles/companion.module.css';
 
 /** 注册时经 slots.register 的 inject 注入的业务面：本页面的 remote 调用面。 */
