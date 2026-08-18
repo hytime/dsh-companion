@@ -4,7 +4,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { SettingsCard } from './settings-card';
-import type { CompanionRemoteFace, CompanionSettings, ScheduleItem } from './companion-types';
+import type { CompanionRemoteFace, CompanionSettings, ScheduleItem } from '../client/companion-types';
 
 const DEFAULT_SETTINGS: CompanionSettings = {
   companionName: '旅伴',

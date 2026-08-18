@@ -9,7 +9,7 @@
  * 失败语义：配置读取失败回退为照常采集（fail-open，与 host 读取失败回缺省
  * 的语义一致，避免瞬时配置读取错误误吞提醒）。本函数永不抛出。
  */
-import type { BuddyResult, CompanionRemoteFace } from './companion-types';
+import type { BuddyResult, CompanionRemoteFace } from '../companion-types';
 
 /** 本模块只依赖 remote 调用面的 getConfig/buddy 两个方法（测试注入最小面）。 */
 export type BuddyGateRemote = Pick<CompanionRemoteFace, 'getConfig' | 'buddy'>;

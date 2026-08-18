@@ -37,7 +37,7 @@ const cssModulePlugin = {
 export default defineConfig([
   // host half → lib/index.js (ESM, node)
   {
-    entry: { index: 'lib/types/host/plugin.js' },
+    entry: { index: 'lib/types/host/index.js' },
     outDir: 'lib',
     format: ['esm'],
     platform: 'node',
@@ -49,7 +49,7 @@ export default defineConfig([
   },
   // client half → lib/client.js (CJS, browser, __ModuleLoader__.load)
   {
-    entry: { client: 'lib/types/client/plugin.js' },
+    entry: { client: 'lib/types/client/index.js' },
     outDir: 'lib',
     format: ['cjs'],
     platform: 'browser',

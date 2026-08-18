@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { fetchBuddyIfRemindersEnabled, type BuddyGateRemote } from './buddy-gate';
-import type { BuddyResult, CompanionSettings } from './companion-types';
+import type { BuddyResult, CompanionSettings } from '../companion-types';
 
 const DEFAULT_SETTINGS: CompanionSettings = {
   companionName: '旅伴',
