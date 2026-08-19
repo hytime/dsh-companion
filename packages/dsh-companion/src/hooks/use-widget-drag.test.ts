@@ -12,12 +12,11 @@ function pointerEvent(type: string, values: Record<string, number>): Event {
 }
 
 describe('useWidgetDrag', () => {
-  it('separates a real drag from a click and persists the moved position', () => {
+  it('persists a real drag without opening a status window', () => {
     const { result } = renderHook(() => {
       const [position, setPosition] = React.useState({ left: 10, top: 10 });
       const [peek, setPeek] = React.useState<import('../utils/widget-position').PeekEdge | null>(null);
-      const [open, setOpen] = React.useState(false);
-      return { ...useWidgetDrag({ peek, position, setPosition, setPeek, setOpen }), position, open };
+      return { ...useWidgetDrag({ peek, position, setPosition, setPeek }), position };
     });
     const target = document.createElement('div');
     target.getBoundingClientRect = () => ({
@@ -35,7 +34,6 @@ describe('useWidgetDrag', () => {
     });
 
     expect(result.current.position).toEqual({ left: 30, top: 40 });
-    expect(result.current.open).toBe(false);
     expect(window.localStorage.getItem('dsh-companion.whale.pos')).toContain('30');
   });
 });

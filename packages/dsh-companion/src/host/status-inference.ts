@@ -1,9 +1,7 @@
 import type { SkillStatus } from '../contracts/skill-contract';
+import type { StatusUpdate } from '../utils/status-utils';
 
-export interface StatusUpdate {
-  status: SkillStatus;
-  lastError?: string;
-}
+export type { StatusUpdate } from '../utils/status-utils';
 
 const COMPANION_SKILL_PREFIX = 'hy-companion';
 

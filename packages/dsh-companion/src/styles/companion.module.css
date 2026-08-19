@@ -31,162 +31,6 @@
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28));
 }
 
-.dsh-companion-popover {
-  position: absolute;
-  box-sizing: border-box;
-  width: min(400px, calc(100vw - 16px));
-  max-width: calc(100vw - 16px);
-  max-height: min(320px, calc(100vh - 16px));
-  min-width: 0;
-  min-height: 0;
-  padding: 12px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-1);
-  color: var(--dsw-alias-label-primary);
-  font-size: 13px;
-  line-height: 1.5;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.dsh-companion-popover > * {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.dsh-companion-popover__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #eef1f4;
-}
-
-.dsh-companion-popover__title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-}
-
-.dsh-companion-popover__greet {
-  color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.dsh-companion-popover__affection {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: #fdf3f4;
-}
-
-.dsh-companion-popover__affection-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-}
-
-.dsh-companion-popover__affection-label {
-  width: 44px;
-  color: var(--dsw-alias-label-secondary);
-  flex-shrink: 0;
-}
-
-.dsh-companion-popover__affection-track {
-  flex: 1;
-  height: 6px;
-  border-radius: 999px;
-  background: #f9dde1;
-  overflow: hidden;
-}
-
-.dsh-companion-popover__affection-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #ff9aa8, #e25563);
-  transition: width 0.4s ease;
-}
-
-.dsh-companion-popover__affection-value {
-  width: 22px;
-  text-align: right;
-  font-weight: 700;
-  color: #e25563;
-}
-
-.dsh-companion-popover__affection-meta {
-  margin-top: 2px;
-  color: #8b949e;
-  font-size: 10px;
-  line-height: 1.4;
-}
-
-.dsh-companion-whale__affection {
-  position: absolute;
-  right: calc(100% + 6px);
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #f2d3d8;
-  border-radius: 999px;
-  padding: 3px 8px;
-  box-shadow: 0 1px 6px rgba(226, 85, 99, 0.15);
-  user-select: none;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-
-.dsh-companion-whale:hover .dsh-companion-whale__affection {
-  opacity: 1;
-}
-
-.dsh-companion-whale__affection-heart {
-  color: #e25563;
-  font-size: 12px;
-  line-height: 1;
-  text-shadow: 0 0 6px rgba(226, 85, 99, 0.6);
-}
-
-.dsh-companion-whale__affection-track {
-  width: 56px;
-  height: 6px;
-  border-radius: 999px;
-  background: #fde8ea;
-  overflow: hidden;
-}
-
-.dsh-companion-whale__affection-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #ff9aa8, #e25563);
-  box-shadow: 0 0 6px rgba(226, 85, 99, 0.5);
-  transition: width 0.4s ease;
-}
-
-.dsh-companion-whale__affection-value {
-  font-size: 11px;
-  font-weight: 700;
-  color: #e25563;
-  min-width: 14px;
-  text-align: right;
-}
-
 .dsh-companion-whale__toast {
   position: absolute;
   left: 0;
@@ -291,34 +135,8 @@
   pointer-events: none;
 }
 
-.dsh-companion-popover__close {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-  color: var(--dsw-alias-label-secondary);
-  padding: 2px 4px;
-}
-
-.dsh-companion-popover__close:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
-  border-radius: 4px;
-}
-
-.dsh-companion-popover__error {
-  color: var(--dsw-alias-state-error-primary);
-  word-break: break-word;
-}
-
-.dsh-companion-popover__reply {
-  align-self: flex-start;
-  margin-top: 2px;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .dsh-companion-whale,
-  .dsh-companion-popover {
+  .dsh-companion-whale {
     transition: none;
   }
 }
@@ -614,4 +432,34 @@
   display: flex;
   flex: 0 0 auto;
   gap: 6px;
+}
+
+.dsh-companion-context-menu {
+  position: fixed;
+  z-index: 2147483100;
+  min-width: 132px;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.dsh-companion-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dsh-companion-context-menu button:hover,
+.dsh-companion-context-menu button:focus-visible {
+  background: var(--dsw-alias-bg-layer-2);
+  outline: none;
 }

@@ -98,7 +98,7 @@ export interface BuddyResult {
 export interface CompanionRemoteFace {
   buddy(): Promise<RemoteResult<BuddyResult>>;
   asset(frame: string): Promise<RemoteResult<{ url: string } | null>>;
-  status(): Promise<RemoteResult<{ status: string; lastError?: string }>>;
+  status(): Promise<RemoteResult<{ status: string; statusMessage?: string; emotion?: string; lastError?: string }>>;
   latestReply(): Promise<RemoteResult<{ reply: string; emotion: string } | null>>;
   authStatus(): Promise<RemoteResult<AuthStatusResult>>;
   login(username: string, password: string): Promise<RemoteResult<CommandResult>>;

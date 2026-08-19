@@ -6,8 +6,22 @@
  * 对象或 CLI 内部堆栈。
  */
 
-/** 思考强度：缺省由 Host/后端归一化为 medium。 */
+import {
+  normalizeCompanionEmotion,
+  type CompanionEmotion,
+  type SkillStatus,
+} from './companion-status';
+
+export {
+  COMPANION_EMOTIONS,
+  SKILL_STATUSES,
+  isCompanionEmotion,
+  normalizeCompanionEmotion,
+  normalizeSkillStatus,
+  statusFallbackEmotion,
+} from './companion-status';
 export type ReasoningEffort = 'low' | 'medium' | 'high';
+export type { CompanionEmotion, SkillStatus } from './companion-status';
 
 /** Skill 输入：来自当前 DSH 对话框的用户意图，附加可选会话标识与强度。 */
 export interface TravelNoteSkillInput {
@@ -25,22 +39,6 @@ export interface TravelNoteCLIResult {
   errorCode?: string;
   errorMessage?: string;
 }
-
-/** 鲸鱼窗口状态机的全部合法状态。 */
-export type SkillStatus =
-  | 'idle'
-  | 'connecting'
-  | 'thinking'
-  | 'replying'
-  | 'success'
-  | 'error'
-  | 'cancelled';
-
-/**
- * 旅伴表情，与 apps/web Phaser CompanionEmotion 完全对齐
- * （COMPANION_EMOTIONS 元组：idle/thinking/talking/happy/shy/surprised）。
- */
-export type CompanionEmotion = 'idle' | 'thinking' | 'talking' | 'happy' | 'shy' | 'surprised';
 
 /** 好感度/亲密度全量参数（hyc affection 的结构化投影）。 */
 export interface AffectionStats {
@@ -71,23 +69,6 @@ export interface AffectionStats {
 export type CharacterActivity = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 const REASONING_EFFORTS: readonly ReasoningEffort[] = ['low', 'medium', 'high'];
-const SKILL_STATUSES: readonly SkillStatus[] = [
-  'idle',
-  'connecting',
-  'thinking',
-  'replying',
-  'success',
-  'error',
-  'cancelled',
-];
-const COMPANION_EMOTIONS: readonly CompanionEmotion[] = [
-  'idle',
-  'thinking',
-  'talking',
-  'happy',
-  'shy',
-  'surprised',
-];
 const CHARACTER_ACTIVITIES: readonly CharacterActivity[] = [
   'idle',
   'listening',
@@ -114,20 +95,6 @@ export function normalizeReasoningEffort(raw: unknown): ReasoningEffort {
 }
 
 /**
- * 归一化 Skill 状态；未知状态回退为 idle。
- */
-export function normalizeSkillStatus(raw: unknown): SkillStatus {
-  return SKILL_STATUSES.includes(raw as SkillStatus) ? (raw as SkillStatus) : 'idle';
-}
-
-/**
- * 归一化旅伴表情；非法/缺省值回退为 idle（对齐 Phaser sanitizeEmotion）。
- */
-export function normalizeCompanionEmotion(raw: unknown): CompanionEmotion {
-  return COMPANION_EMOTIONS.includes(raw as CompanionEmotion) ? (raw as CompanionEmotion) : 'idle';
-}
-
-/**
  * Skill 状态 → Phaser 角色活动阶段（对齐 CharacterActivity 语义）：
  * - idle/success → idle
  * - connecting → listening（正在连接/倾听输入）
@@ -147,13 +114,6 @@ export function skillStatusToActivity(status: SkillStatus): CharacterActivity {
     default:
       return 'idle';
   }
-}
-
-/**
- * 校验是否为合法 CompanionEmotion（对齐 Phaser isCompanionEmotion）。
- */
-export function isCompanionEmotion(value: unknown): value is CompanionEmotion {
-  return COMPANION_EMOTIONS.includes(value as CompanionEmotion);
 }
 
 /**

@@ -32,4 +32,19 @@ describe('useReplyBubbles', () => {
     expect(result.current.replyToast).toBeNull();
     vi.useRealTimers();
   });
+
+  it('shows the current status message when no real reply exists', () => {
+    const { result } = renderHook(() => useReplyBubbles({ status: 'thinking', statusMessage: '我正在检查这一步。' }));
+    expect(result.current.replyToast).toBe('我正在检查这一步。');
+  });
+
+  it('lets a real reply replace and suppress the status message', () => {
+    const { result, rerender } = renderHook<ReturnType<typeof useReplyBubbles>, ReplyBubbleOptions>((props) => useReplyBubbles(props), {
+      initialProps: { status: 'thinking', statusMessage: '状态说明' },
+    });
+    rerender({ status: 'replying', statusMessage: '状态说明', latestReply: '真实回复' });
+    expect(result.current.replyToast).toBe('真实回复');
+    rerender({ status: 'replying', statusMessage: '状态说明' });
+    expect(result.current.replyToast).toBeNull();
+  });
 });

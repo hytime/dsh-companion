@@ -15,13 +15,11 @@ export interface WidgetDragOptions {
   position: Position;
   setPosition: React.Dispatch<React.SetStateAction<Position>>;
   setPeek: React.Dispatch<React.SetStateAction<PeekEdge | null>>;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export function useWidgetDrag({ peek, position, setPosition, setPeek, setOpen }: WidgetDragOptions) {
+export function useWidgetDrag({ peek, position, setPosition, setPeek }: WidgetDragOptions) {
   const positionRef = useRef(position);
   const dragRef = useRef<DragState | null>(null);
-  const skipClickRef = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
   positionRef.current = position;
 
@@ -58,12 +56,9 @@ export function useWidgetDrag({ peek, position, setPosition, setPeek, setOpen }:
       dragRef.current = null;
       cleanup();
       if (drag === null) return;
-      skipClickRef.current = true;
       if (drag.moved) {
         savePosition(positionRef.current);
         setPeek(nearestEdge(positionRef.current.left, positionRef.current.top));
-      } else {
-        setOpen((currentOpen) => !currentOpen);
       }
     };
     cleanupRef.current = cleanup;
@@ -77,22 +72,5 @@ export function useWidgetDrag({ peek, position, setPosition, setPeek, setOpen }:
     dragRef.current = null;
   }, []);
 
-  const handleClick = (): void => {
-    if (skipClickRef.current) {
-      skipClickRef.current = false;
-      return;
-    }
-    setOpen((currentOpen) => !currentOpen);
-  };
-
-  const togglePeek = (): void => {
-    if (peek !== null) {
-      setPeek(null);
-      return;
-    }
-    const edge = nearestEdge(positionRef.current.left, positionRef.current.top);
-    if (edge !== null) setPeek(edge);
-  };
-
-  return { positionRef, startDrag, handleClick, togglePeek };
+  return { positionRef, startDrag };
 }

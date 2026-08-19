@@ -65,6 +65,13 @@ describe('normalizeSkillStatusUpdate', () => {
     expect(normalizeSkillStatusUpdate({ status: 'cancelled' })).toEqual({ status: 'cancelled' });
   });
 
+  it('保留 statusMessage 并过滤非字符串文案', () => {
+    expect(normalizeSkillStatusUpdate({ status: 'thinking', statusMessage: '检查中' })).toEqual({
+      status: 'thinking', statusMessage: '检查中',
+    });
+    expect(normalizeSkillStatusUpdate({ status: 'thinking', statusMessage: 42 })).toEqual({ status: 'thinking' });
+  });
+
   it('保留 lastError', () => {
     expect(normalizeSkillStatusUpdate({ status: 'error', lastError: 'timeout' })).toEqual({
       status: 'error',
