@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { EVENTS_URL } from '../../contracts/remote-descriptors';
-import { normalizeSkillStatusUpdate, type SkillStatusUpdate } from '../../state/skill-status-source';
+import { normalizeStatusUpdate, type StatusUpdate } from '../../utils/status-utils';
+import { parseStatusEvent } from './status-parser';
 import { fetchBuddyIfRemindersEnabled } from './buddy-gate';
 import type { BuddyResult, CompanionRemoteFace } from '../companion-types';
 
@@ -12,7 +13,7 @@ export interface CompanionEventStreamTimer {
   interval(callback: () => void, milliseconds: number): () => void;
 }
 
-export interface EventStreamState extends SkillStatusUpdate {}
+export interface EventStreamState extends StatusUpdate {}
 
 export interface CompanionEventStreamResult {
   state: EventStreamState;
@@ -40,7 +41,7 @@ export function useCompanionEventStream(
       if (active) setLatestReply(value?.reply);
     };
     const applyStatus = (value: unknown): void => {
-      if (active) setState(normalizeSkillStatusUpdate(value));
+      if (active) setState(normalizeStatusUpdate(value));
     };
     const stopFallback = (): void => {
       disposeFallback?.();
@@ -65,7 +66,8 @@ export function useCompanionEventStream(
       eventSource = new EventSource(EVENTS_URL);
       eventSource.onopen = stopFallback;
       eventSource.addEventListener('status', (event) => {
-        try { applyStatus(JSON.parse((event as MessageEvent<string>).data)); } catch { /* ignore malformed frame */ }
+        const parsed = parseStatusEvent((event as MessageEvent<string>).data);
+        if (parsed !== null) applyStatus(parsed);
       });
       eventSource.addEventListener('buddy', (event) => {
         try { applyBuddy(JSON.parse((event as MessageEvent<string>).data) as BuddyResult); } catch { /* ignore malformed frame */ }

@@ -1,14 +1,15 @@
 # DSH Companion 🐋 鲸鱼娘陪伴插件
 
-一只悬浮在 DeepSeek Harness 里的鲸鱼娘,陪伴你的日常:展示旅伴的对话回复、情绪状态与好感度,收发定时陪伴提醒。
+一只悬浮在 DeepSeek Harness 里的鲸鱼娘,陪伴你的日常:展示旅伴的对话回复与情绪状态,收发定时陪伴提醒。
 
 「hy-companion 陪伴系统」的 DSH 前端,由「插件 + 技能 + CLI」三件套构成:前端插件显示并反馈 Skill/CLI 状态;DSH 技能调用 `hyc` CLI;`hyc` 转由线上服务产出结构化 `text/emotion/status` 响应。前端插件只接收可序列化的状态,不直接访问 DSH Host/Client Service、credentials 或 live runtime 对象。
 
 ## ✨ 功能特性
 
 - **鲸鱼娘悬浮立绘**:可拖动、位置记忆,表情帧随状态切换(idle / thinking / replying / error…)
-- **对话回复气泡**:打字机逐字输出,宽度自适应、左右双向展开,长文本完整展示
-- **情绪与好感度**:实时展示旅伴情绪与好感度条
+- **对话回复气泡**:状态文案和真实回复使用旅伴气泡显示,打字机逐字输出,宽度自适应
+- **右键聊天菜单**:通过“和旅伴聊聊”进入主对话,不打开状态窗口
+- **情绪状态**:实时切换旅伴表情帧
 - **定时陪伴提醒**:buddy 消息弹窗提醒
 - **前置自愈**:缺失 `hyc` CLI 或技能时自动安装,开箱即用
 - **安全边界**:不写入任何凭据,不访问 DSH 内部对象
@@ -19,9 +20,9 @@
 |---|---|
 | ![悬浮立绘](docs/screenshots/whale-idle.png) | ![对话回复气泡](docs/screenshots/whale-speech.png) |
 
-| 对话窗 | 定时陪伴提醒 |
-|---|---|
-| ![对话窗](docs/screenshots/whale-popover.png) | ![定时陪伴提醒](docs/screenshots/whale-toast.png) |
+| 定时陪伴提醒 |
+|---|
+| ![定时陪伴提醒](docs/screenshots/whale-toast.png) |
 
 ## 🚀 快速开始
 
@@ -40,7 +41,7 @@ dsh plugin add @hytime/dsh-companion          # 从 npm 安装
 - 缺失 `hyc` CLI → 自动 `npm i -g @hytime/hyc`
 - 缺失 DSH 技能 → 自动安装技能包并写入 `$DSH_HOME/skills`
 
-全部就绪后,悬浮鲸鱼娘出现在页面右下角,点击展开对话窗。
+全部就绪后,悬浮鲸鱼娘出现在页面右下角。右键鲸鱼可选择“和旅伴聊聊”,状态与回复会通过气泡显示。
 
 ## ⚙️ 配置插件
 

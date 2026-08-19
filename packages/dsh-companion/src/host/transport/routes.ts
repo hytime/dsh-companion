@@ -4,7 +4,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import { EVENTS_URL, REMOTE_PACKAGE } from '../../contracts/remote-descriptors';
 import { scheduleInitialPushes } from '../schedules/timer';
 import type { TravelNoteCompanionHostOptions, CompanionRemote } from '../remote/service';
-import { FRAME_NAMES } from '../remote/service';
+import { FRAME_NAMES } from '../../contracts/companion-status';
 import type { SsePublisher, SseResponse } from './sse-publisher';
 
 interface WebServerService {

@@ -1,16 +1,7 @@
-import {
-  normalizeCompanionEmotion,
-  normalizeSkillStatus,
-  type CompanionEmotion,
-  type SkillStatus,
-} from '../contracts/skill-contract';
+import { normalizeStatusUpdate, type StatusUpdate } from '../utils/status-utils';
 
 /** 一次可序列化的 Skill 状态更新。 */
-export interface SkillStatusUpdate {
-  status: SkillStatus;
-  emotion?: CompanionEmotion;
-  lastError?: string;
-}
+export type SkillStatusUpdate = StatusUpdate;
 
 /** 状态订阅者。 */
 export type SkillStatusListener = (update: SkillStatusUpdate) => void;
@@ -33,15 +24,7 @@ export interface SkillStatusSource {
  * 未知状态回退 idle、非法表情回退 idle、未知字段忽略。
  */
 export function normalizeSkillStatusUpdate(raw: unknown): SkillStatusUpdate {
-  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { status: 'idle' };
-  }
-  const record = raw as Record<string, unknown>;
-  const status = normalizeSkillStatus(record.status);
-  const emotion =
-    record.emotion === undefined ? undefined : normalizeCompanionEmotion(record.emotion);
-  const lastError = typeof record.lastError === 'string' ? record.lastError : undefined;
-  return { status, emotion, lastError };
+  return normalizeStatusUpdate(raw);
 }
 
 export interface SkillStatusAdapter {

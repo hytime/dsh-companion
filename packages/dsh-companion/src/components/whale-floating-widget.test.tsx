@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WhaleFloatingWidget } from './whale-floating-widget';
@@ -34,18 +34,15 @@ describe('WhaleFloatingWidget', () => {
     expect(document.querySelector('textarea')).not.toBeInTheDocument();
   });
 
-  it('点击人物展开对话窗，再次点击收起', async () => {
+  it('点击人物不打开状态窗口', async () => {
     const user = userEvent.setup();
     render(<WhaleFloatingWidget status="idle" />);
-    const trigger = getTrigger();
-    await user.click(trigger);
-    expect(screen.getByText(/等待输入当前对话/)).toBeInTheDocument();
-    await user.click(trigger);
-    expect(screen.queryByText(/等待输入当前对话/)).not.toBeInTheDocument();
+    await user.click(getTrigger());
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryByText('旅伴')).not.toBeInTheDocument();
   });
 
-  it('对话窗显示旅伴名称与最新 buddy 消息', async () => {
-    const user = userEvent.setup();
+  it('buddy 提醒独立显示标题与消息', async () => {
     render(
       <WhaleFloatingWidget
         status="idle"
@@ -54,27 +51,29 @@ describe('WhaleFloatingWidget', () => {
         buddyMessage="该给自己泡杯茶配个小点心"
       />,
     );
-    await user.click(getTrigger());
-    expect(screen.getByText(/小小梦/)).toBeInTheDocument();
-    // 打字机逐字显示（toast 与对话窗消息），findByText 轮询等待完成
+    expect(await screen.findByText('下午茶')).toBeInTheDocument();
+    // 打字机逐字显示，等待提醒消息完成
     await screen.findByText(/该给自己泡杯茶配个小点心/, undefined, { timeout: 3000 });
   });
 
-  it('点击关闭按钮收起对话窗', async () => {
+  it('右键打开菜单并触发和旅伴聊聊', async () => {
     const user = userEvent.setup();
-    render(<WhaleFloatingWidget status="success" />);
-    await user.click(getTrigger());
-    await user.click(screen.getByRole('button', { name: /关闭/i }));
-    expect(screen.queryByText(/已返回当前对话/)).not.toBeInTheDocument();
+    const onReply = vi.fn();
+    render(<WhaleFloatingWidget status="success" onReply={onReply} />);
+    act(() => fireEvent.contextMenu(getTrigger(), { clientX: 100, clientY: 100 }));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: '和旅伴聊聊' }));
+    expect(onReply).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('Escape 收起对话窗', async () => {
+  it('Escape 关闭右键菜单', async () => {
     const user = userEvent.setup();
-    render(<WhaleFloatingWidget status="idle" />);
-    await user.click(getTrigger());
-    expect(screen.getByText(/等待输入当前对话/)).toBeInTheDocument();
+    render(<WhaleFloatingWidget status="idle" onReply={() => {}} />);
+    act(() => fireEvent.contextMenu(getTrigger(), { clientX: 100, clientY: 100 }));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
     await user.keyboard('{Escape}');
-    expect(screen.queryByText(/等待输入当前对话/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it.each(STATUSES)('状态 %s 反映在 aria-label', (status) => {
@@ -83,20 +82,19 @@ describe('WhaleFloatingWidget', () => {
     expect(trigger.getAttribute('aria-label')).toContain(status);
   });
 
-  it('error 状态显示最近错误，回复按钮触发 onReply', async () => {
+  it('error 状态不重复显示错误面板，但右键聊天入口仍可用', async () => {
     const user = userEvent.setup();
     const onReply = vi.fn();
     render(
       <WhaleFloatingWidget
         status="error"
-        lastError="hyc chat 超时"
         companionName="小小梦"
         onReply={onReply}
       />,
     );
-    await user.click(getTrigger());
-    expect(screen.getByText(/hyc chat 超时/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /和小小梦聊聊/i }));
+    act(() => fireEvent.contextMenu(getTrigger(), { clientX: 100, clientY: 100 }));
+    expect(screen.queryByText(/hyc chat 超时/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: '和小小梦聊聊' }));
     expect(onReply).toHaveBeenCalledTimes(1);
   });
 

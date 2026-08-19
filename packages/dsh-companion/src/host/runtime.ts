@@ -3,14 +3,16 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Context } from '@deepseek-ai/cordis';
 import { REMOTE_SERVICE } from '../contracts/remote-descriptors';
-import type { StatusUpdate } from './status-inference';
+import type { StatusUpdate } from '../utils/status-utils';
+import { createStatusStateMachine } from './status/state-machine';
+import { createStatusNarrator, type NarratorLlm } from './status/narrator';
+import { registerStatusEventBridge } from './status/event-bridge';
 import { readSettings } from './settings-store';
 import { runSelfHeal } from './prerequisites/self-heal';
 import { CompanionRemote, registerAlternateProtocolMarkers, type BuddyBase, type BuddyResult, type TravelNoteCompanionHostOptions } from './remote/service';
 import { createBuddyTimer, selectPushChannels, type BuddyTimerDeps } from './schedules/timer';
 import { createSsePublisher } from './transport/sse-publisher';
 import { registerCompanionRoutes } from './transport/routes';
-import { registerLegacyStatusBridge } from './status/legacy-event-bridge';
 
 export type { StatusUpdate, BuddyBase, BuddyResult, TravelNoteCompanionHostOptions, BuddyTimerDeps };
 export {
@@ -41,7 +43,23 @@ export async function applyHostRuntime(ctx: Context, options: TravelNoteCompanio
   ctx.emit('internal/service', REMOTE_SERVICE, remote);
 
   const publisher = createSsePublisher();
-  const publishStatus = (): void => publisher.broadcast('status', remote.getStatus());
+  const llm = ctx.get('llm') as NarratorLlm | undefined;
+  const narrator = llm === undefined ? undefined : createStatusNarrator(llm);
+  const machine = createStatusStateMachine({
+    narrate: narrator,
+    onChange: (snapshot) => {
+      const update: StatusUpdate = {
+        status: snapshot.status,
+        ...snapshot.statusMessage === undefined ? {} : { statusMessage: snapshot.statusMessage },
+        ...snapshot.emotion === undefined ? {} : { emotion: snapshot.emotion },
+        ...snapshot.lastError === undefined ? {} : { lastError: snapshot.lastError },
+      };
+      remote.setStatus(update);
+      publisher.broadcast('status', update);
+    },
+  });
+  const statusBridge = registerStatusEventBridge(ctx, machine);
+  remote.setAgentSelectionHandler(statusBridge.selectAgent);
   const pushBuddy = async (): Promise<void> => {
     try { publisher.broadcast('buddy', await remote.buddy()); } catch { /* retry next cycle */ }
   };
@@ -88,7 +106,6 @@ export async function applyHostRuntime(ctx: Context, options: TravelNoteCompanio
       clearInterval(replyTimer);
     };
   });
-  registerLegacyStatusBridge(ctx, remote, publishStatus);
   ctx.effect(() => registerCompanionRoutes({
     ctx,
     remote,

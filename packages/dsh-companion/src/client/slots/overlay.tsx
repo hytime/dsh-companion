@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { WhaleFloatingWidget } from '../../components/whale-floating-widget';
 import { useCompanionEventStream } from '../stream/event-stream';
-import type { ClientRemote, ClientTimer, SlotsService } from './slot-types';
+import type { ClientRemote, ClientTimer, OverlaySlotProps, SlotsService } from './slot-types';
 import type { CompanionRemoteFace } from '../companion-types';
 
 class WhaleBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
@@ -48,30 +48,23 @@ interface WhaleOverlayProps {
   remote: ClientRemote;
   timer?: ClientTimer;
   onReply: () => void;
+  useSessions: OverlaySlotProps['useSessions'];
 }
 
-function WhaleOverlay({ remote, timer, onReply }: WhaleOverlayProps): React.ReactElement {
+function WhaleOverlay({ remote, timer, onReply, useSessions }: WhaleOverlayProps): React.ReactElement {
+  const selectedAgentId = useSessions((snapshot) => snapshot.current);
   const { state, buddy, latestReply } = useCompanionEventStream(remote, timer);
+  React.useEffect(() => {
+    void remote.travelNoteCompanion.selectAgent(selectedAgentId ?? null).catch(() => {});
+  }, [remote, selectedAgentId]);
   return React.createElement(
     WhaleBoundary,
     null,
     React.createElement(WhaleFloatingWidget, {
       status: state.status,
       emotion: state.emotion,
-      lastError: state.lastError,
+      statusMessage: state.statusMessage,
       companionName: buddy?.companionName ?? '旅伴',
-      userCallName: buddy?.userCallName,
-      affection: buddy === null ? undefined : {
-        affectionScore: buddy.affectionScore,
-        intimacyScore: buddy.intimacyScore,
-        trustScore: buddy.trustScore,
-        engagementScore: buddy.engagementScore,
-        talkativenessFactor: buddy.talkativenessFactor,
-        proactiveProbabilityFactor: buddy.proactiveProbabilityFactor,
-        cooldownFactor: buddy.cooldownFactor,
-        lastEvaluatedDate: buddy.lastEvaluatedDate,
-        lastAnnouncedDate: buddy.lastAnnouncedDate,
-      },
       buddyTitle: buddy?.title,
       buddyMessage: buddy?.message,
       latestReply,
@@ -88,7 +81,7 @@ export function registerOverlaySlot(
 ): () => void {
   return slots.inject('shell.overlay', () => slots.register(
     { name: 'shell.overlay', id: 'dsh-companion-whale' },
-    () => React.createElement(WhaleOverlay, { remote, timer, onReply }),
+    (props: OverlaySlotProps) => React.createElement(WhaleOverlay, { remote, timer, onReply, useSessions: props.useSessions }),
   ));
 }
 

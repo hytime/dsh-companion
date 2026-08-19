@@ -1,12 +1,11 @@
 /* eslint-disable @next/next/no-img-element -- 本插件不是 Next.js 项目，使用原生 img 加载鲸鱼娘帧 */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { WhaleStatusPopover } from './whale-status-popover';
+import { WhaleContextMenu } from './context-menu';
 import { DeepSeekLogo } from './deepseek-logo';
 import { frameUrl, resolveWhaleFrame } from './expression-map';
 import { useTypewriter } from '../hooks/use-typewriter';
 import { useWidgetDrag } from '../hooks/use-widget-drag';
 import { useReplyBubbles } from '../hooks/use-reply-bubbles';
-import { WhaleAffectionMeter } from './affection-meter';
 import { WhaleMessageBubble } from './message-bubble';
 import {
   FIGURE_H,
@@ -17,21 +16,18 @@ import {
   peekPosition,
   type PeekEdge,
 } from '../utils/widget-position';
-import type { AffectionStats, CompanionEmotion, SkillStatus } from '../contracts/skill-contract';
+import type { CompanionEmotion, SkillStatus } from '../contracts/skill-contract';
 import styles from '../styles/companion.module.css';
 
 export interface WhaleFloatingWidgetProps {
   status: SkillStatus;
   emotion?: CompanionEmotion;
-  lastError?: string;
+  statusMessage?: string;
   companionName?: string;
-  userCallName?: string;
-  affection?: AffectionStats;
   buddyTitle?: string;
   buddyMessage?: string;
   latestReply?: string;
   onReply?: () => void;
-  onClose?: () => void;
 }
 
 const STATUS_HINT: Record<SkillStatus, string> = {
@@ -51,41 +47,32 @@ const STATUS_HINT: Record<SkillStatus, string> = {
 export function WhaleFloatingWidget({
   status,
   emotion,
-  lastError,
+  statusMessage,
   companionName = '旅伴',
-  userCallName,
-  affection,
   buddyTitle,
   buddyMessage,
   latestReply,
   onReply,
-  onClose,
 }: WhaleFloatingWidgetProps) {
-  const [open, setOpen] = useState(false);
   const [position, setPosition] = useState(initialPosition);
   const [peek, setPeek] = useState<PeekEdge | null>(null);
-  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>(() => ({
-    left: 0,
-    bottom: FIGURE_H + POPOVER_GAP,
-  }));
+  const [contextMenu, setContextMenu] = useState<{ left: number; top: number } | null>(null);
   const [bubbleLeft, setBubbleLeft] = useState(0);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const popoverRef = useRef<HTMLDivElement | null>(null);
   const speechRef = useRef<HTMLDivElement | null>(null);
   const toastRef = useRef<HTMLDivElement | null>(null);
   const frame = resolveWhaleFrame(status, emotion);
   const { toast, replyToast, dismissToast, dismissReply } = useReplyBubbles({
     status,
+    statusMessage,
     buddyTitle,
     buddyMessage,
     latestReply,
   });
-  const { startDrag, handleClick, togglePeek } = useWidgetDrag({
+  const { startDrag } = useWidgetDrag({
     peek,
     position,
     setPosition,
     setPeek,
-    setOpen,
   });
 
   /** 回复/提醒气泡边界自适应：默认与人物左缘对齐向右展开；
@@ -107,49 +94,36 @@ export function WhaleFloatingWidget({
     setBubbleLeft(left);
   }, [replyToast, toast, position]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-        rootRef.current?.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open]);
-
-  /** 对话窗边界自适应：优先上方；空间不足转下方；水平防溢出（渲染后按实测校正）。
-   *  对话窗是 root 的子元素，left 为相对 root 的偏移（root 本身定位在 position.left）。 */
-  useLayoutEffect(() => {
-    if (!open) return;
-    const node = popoverRef.current;
-    if (node === null) return;
-    const rect = node.getBoundingClientRect();
-    const popoverW = rect.width > 0 ? rect.width : 280;
-    const popoverH = rect.height > 0 ? rect.height : 120;
-    const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1024;
-    const spaceTop = position.top;
-    const vertical: React.CSSProperties =
-      spaceTop >= popoverH + POPOVER_GAP
-        ? { bottom: FIGURE_H + POPOVER_GAP }
-        : { top: FIGURE_H + POPOVER_GAP };
-    // 相对 root 的偏移：默认 0（与鲸鱼左缘对齐）；右侧溢出时右对齐（右缘贴鲸鱼右缘）。
-    let relativeLeft = 0;
-    if (position.left + relativeLeft + popoverW > viewportW - POPOVER_EDGE) {
-      relativeLeft = FIGURE_W - popoverW;
-    }
-    relativeLeft = Math.max(
-      POPOVER_EDGE - position.left,
-      Math.min(relativeLeft, viewportW - popoverW - POPOVER_EDGE - position.left),
-    );
-    setPopoverStyle({ left: relativeLeft, ...vertical });
-  }, [open, position, buddyMessage, lastError]);
-
   const handleReply = (): void => {
-    setOpen(false);
+    setContextMenu(null);
     onReply?.();
   };
+
+  const openContextMenu = (event: React.MouseEvent<HTMLDivElement>): void => {
+    event.preventDefault();
+    if (onReply === undefined) return;
+    const menuWidth = 160;
+    const menuHeight = 44;
+    const edge = 8;
+    setContextMenu({
+      left: Math.min(event.clientX, window.innerWidth - menuWidth - edge),
+      top: Math.min(event.clientY, window.innerHeight - menuHeight - edge),
+    });
+  };
+
+  useEffect(() => {
+    if (contextMenu === null) return;
+    const close = (): void => setContextMenu(null);
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') close();
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [contextMenu]);
 
   const label = `${companionName}：${STATUS_HINT[status]}`;
   const displayPos = peek === null ? position : peekPosition(peek, position);
@@ -159,25 +133,13 @@ export function WhaleFloatingWidget({
 
   return (
     <div
-      ref={rootRef}
       role="button"
       tabIndex={0}
       aria-label={label}
-      aria-expanded={open}
       className={styles['dsh-companion-whale']}
       style={{ left: displayPos.left, top: displayPos.top }}
       onPointerDown={startDrag}
-      onClick={handleClick}
-      onContextMenu={(event) => {
-        event.preventDefault();
-        togglePeek();
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          setOpen((current) => !current);
-        }
-      }}
+      onContextMenu={openContextMenu}
     >
       {peek === null ? (
         <div className={styles['dsh-companion-whale__figure']} style={{ width: FIGURE_W, height: FIGURE_H }}>
@@ -203,7 +165,6 @@ export function WhaleFloatingWidget({
           <DeepSeekLogo className={styles['dsh-companion-whale__peek-logo']} />
         </button>
       )}
-      <WhaleAffectionMeter affection={affection} />
       {replyToast !== null ? (
         <WhaleMessageBubble
           ref={speechRef}
@@ -229,21 +190,8 @@ export function WhaleFloatingWidget({
           onClose={dismissToast}
         />
       ) : null}
-      {open ? (
-        <WhaleStatusPopover
-          ref={popoverRef}
-          style={popoverStyle}
-          companionName={companionName}
-          userCallName={userCallName}
-          affection={affection}
-          status={status}
-          lastError={lastError}
-          onReply={onReply ? handleReply : undefined}
-          onClose={() => {
-            setOpen(false);
-            onClose?.();
-          }}
-        />
+      {contextMenu !== null ? (
+        <WhaleContextMenu companionName={companionName} left={contextMenu.left} top={contextMenu.top} onChat={handleReply} />
       ) : null}
     </div>
   );

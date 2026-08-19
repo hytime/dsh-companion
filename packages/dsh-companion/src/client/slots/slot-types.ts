@@ -6,5 +6,12 @@ export interface SlotsService {
   register: SlotCore['register'];
 }
 
+export interface SessionListSnapshot {
+  current: string | undefined;
+}
+
+export type UseSessions = <T>(selector: (snapshot: SessionListSnapshot) => T) => T;
+export interface OverlaySlotProps { useSessions: UseSessions }
+
 export type ClientRemote = CompanionEventStreamRemote;
 export type ClientTimer = CompanionEventStreamTimer;

@@ -52,6 +52,7 @@ function createRemote(overrides: Partial<CompanionRemoteFace> = {}): CompanionRe
     buddy: vi.fn(),
     asset: vi.fn(),
     status: vi.fn(),
+    selectAgent: vi.fn(async () => ({ ok: true as const, value: { ok: true as const } })),
     latestReply: vi.fn(),
     authStatus: vi.fn(async () => ({ ok: true as const, value: { ok: true as const, status: 'authenticated' as const } })),
     login: vi.fn(),
@@ -79,7 +80,7 @@ function createUnauthenticatedRemote(overrides: Partial<CompanionRemoteFace> = {
 }
 
 function renderCard(remote: CompanionRemoteFace) {
-  return render(<SettingsCard remote={remote} close={(): void => {}} />);
+  return render(<SettingsCard remote={remote} close={(): void => {}} useSessions={(selector) => selector({ current: undefined })} />);
 }
 
 describe('SettingsCard', () => {
