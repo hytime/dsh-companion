@@ -70,6 +70,7 @@ export class CompanionRemote extends TypertRemoteService {
   private settings: CompanionSettings = { ...DEFAULT_SETTINGS };
   private onConfigApplied?: () => void;
   private readonly settingsHandlers: SettingsRpcHandlers;
+  private onAgentSelected?: (sessionId: string | null) => void;
 
   constructor(ctx: Context, deps?: SettingsRpcDeps) {
     super(ctx, REMOTE_SERVICE);
@@ -88,12 +89,22 @@ export class CompanionRemote extends TypertRemoteService {
     this.onConfigApplied = callback;
   }
 
+  setAgentSelectionHandler(callback: (sessionId: string | null) => void): void {
+    this.onAgentSelected = callback;
+  }
+
   setStatus(update: StatusUpdate): void {
     this.currentStatus = { ...normalizeStatusUpdate(update) };
   }
 
   getStatus(): StatusUpdate {
     return { ...this.currentStatus };
+  }
+
+  @Remote
+  async selectAgent(sessionId: string | null): Promise<{ ok: true }> {
+    this.onAgentSelected?.(sessionId);
+    return { ok: true };
   }
 
   @Remote
@@ -258,7 +269,7 @@ interface ShellService {
 }
 
 const REMOTE_METHOD_NAMES = [
-  'status', 'buddy', 'latestReply', 'asset', 'authStatus', 'login', 'register', 'logout',
+  'selectAgent', 'status', 'buddy', 'latestReply', 'asset', 'authStatus', 'login', 'register', 'logout',
   'getConfig', 'setConfig', 'listSchedules', 'createSchedule', 'enableSchedule', 'disableSchedule', 'deleteSchedule',
 ] as const;
 const SRC_PROTOCOL_SPECIFIER = '@deepseek-ai/dsh-typert-protocol/src/index.ts';

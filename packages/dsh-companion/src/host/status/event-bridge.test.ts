@@ -37,12 +37,19 @@ describe('main agent status event bridge', () => {
     expect(machine.restoreAfterApproval).toHaveBeenCalledTimes(1);
   });
 
-  it('does not convert an error phase to success on idle', () => {
+  it('switches the focused agent and ignores the old focus', async () => {
     const handlers: Record<string, Handler> = {};
     const ctx = { on: vi.fn((name: string, handler: Handler) => { handlers[name] = handler; }) };
-    const machine = { enter: vi.fn(), restoreAfterApproval: vi.fn(), get: () => ({ phase: 'error' }) };
-    registerStatusEventBridge(ctx as never, machine as never);
-    handlers['agent/status']!({ agent: { session: { header: { id: 'main' } } }, status: 'idle' });
+    const machine = { enter: vi.fn(), restoreAfterApproval: vi.fn(), reset: vi.fn() };
+    const controller = registerStatusEventBridge(ctx as never, machine as never);
+    const child = { id: 'child', session: { header: { parentSession: 'main' } } };
+    const next = vi.fn(async () => undefined);
+
+    await handlers['tools/execute']!({ agent: child, name: 'bash', arguments: {}, signal: { aborted: false } }, next);
     expect(machine.enter).not.toHaveBeenCalled();
+    controller.selectAgent('child');
+    expect(machine.enter).toHaveBeenCalledWith('executing', expect.objectContaining({ context: 'bash' }));
+    await handlers['tools/execute']!({ agent: child, name: 'bash', arguments: {}, signal: { aborted: false } }, next);
+    expect(machine.enter).toHaveBeenCalledWith('executing', expect.objectContaining({ context: 'bash' }));
   });
 });

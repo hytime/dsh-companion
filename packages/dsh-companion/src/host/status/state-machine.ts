@@ -61,6 +61,13 @@ export function createStatusStateMachine(options: StatusStateMachineOptions) {
   return {
     get: (): StatusMachineSnapshot => snapshot,
     enter,
+    reset: (): StatusMachineSnapshot => {
+      controller?.abort();
+      controller = new AbortController();
+      snapshot = { phase: 'idle', status: 'idle', generation: snapshot.generation + 1 };
+      options.onChange(snapshot);
+      return snapshot;
+    },
     publishNarration,
     restoreAfterApproval: (): StatusMachineSnapshot => {
       const restored = phaseBeforeApproval === 'idle' || phaseBeforeApproval === 'approval'

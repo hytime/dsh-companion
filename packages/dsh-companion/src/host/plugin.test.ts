@@ -496,7 +496,7 @@ describe('registerAlternateProtocolMarkers(双表注册:备选实例镜像标记
     await registerAlternateProtocolMarkers(alternate);
     const methods = alternate.remoteMethods(probe).map((m) => m.method);
     expect(methods).toEqual([
-      'status', 'buddy', 'latestReply', 'asset', 'authStatus', 'login', 'register', 'logout',
+      'selectAgent', 'status', 'buddy', 'latestReply', 'asset', 'authStatus', 'login', 'register', 'logout',
       'getConfig', 'setConfig', 'listSchedules', 'createSchedule', 'enableSchedule', 'disableSchedule', 'deleteSchedule',
     ]);
   });

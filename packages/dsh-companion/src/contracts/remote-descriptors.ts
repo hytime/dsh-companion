@@ -27,8 +27,12 @@ export const ASSET_RESULT_SYMBOL = `${REMOTE_PACKAGE}#${ASSET_METHOD}:result`;
 export const LATEST_REPLY_RESULT_SYMBOL = `${REMOTE_PACKAGE}#${LATEST_REPLY_METHOD}:result`;
 
 export const STATUS_METHOD = 'status';
+export const SELECT_AGENT_METHOD = 'selectAgent';
 export const STATUS_ENDPOINT_ID = `${REMOTE_PACKAGE}#${REMOTE_NAMESPACE}/${STATUS_METHOD}`;
+export const SELECT_AGENT_ENDPOINT_ID = `${REMOTE_PACKAGE}#${REMOTE_NAMESPACE}/${SELECT_AGENT_METHOD}`;
 export const STATUS_RESULT_SYMBOL = `${REMOTE_PACKAGE}#${STATUS_METHOD}:result`;
+export const SELECT_AGENT_RESULT_SYMBOL = `${REMOTE_PACKAGE}#${SELECT_AGENT_METHOD}:result`;
+export const SELECT_AGENT_SESSION_SYMBOL = `${REMOTE_PACKAGE}#${SELECT_AGENT_METHOD}:sessionId`;
 
 // ---- 配置页 RPC（task 3 Host @Remote 方法，task 4 Client 描述符补齐） ----
 

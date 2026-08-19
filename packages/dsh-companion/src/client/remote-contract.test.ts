@@ -8,6 +8,7 @@ describe('travelNoteCompanionRemote', () => {
       'travelNoteCompanion/buddy',
       'travelNoteCompanion/asset',
       'travelNoteCompanion/status',
+      'travelNoteCompanion/selectAgent',
       'travelNoteCompanion/latestReply',
       'travelNoteCompanion/authStatus',
       'travelNoteCompanion/login',
@@ -36,7 +37,7 @@ describe('travelNoteCompanionRemote', () => {
     expect(byMethod('setConfig')?.parameters.map((parameter) => parameter.wire)).toEqual(['partial']);
     expect(byMethod('enableSchedule')?.parameters.map((parameter) => parameter.wire)).toEqual(['id']);
     expect(byMethod('disableSchedule')?.parameters.map((parameter) => parameter.wire)).toEqual(['id']);
-    expect(byMethod('listSchedules')?.parameters.map((parameter) => parameter.wire)).toEqual(['page', 'pageSize']);
+    expect(byMethod('selectAgent')?.parameters.map((parameter) => parameter.wire)).toEqual(['sessionId']);
     expect(byMethod('listSchedules')?.parameters.every((parameter) => parameter.acceptsUndefined === true)).toBe(true);
     expect(byMethod('createSchedule')?.parameters.map((parameter) => parameter.wire)).toEqual(['text']);
     for (const method of ['authStatus', 'logout', 'getConfig']) {

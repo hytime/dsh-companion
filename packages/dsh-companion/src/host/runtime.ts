@@ -58,7 +58,8 @@ export async function applyHostRuntime(ctx: Context, options: TravelNoteCompanio
       publisher.broadcast('status', update);
     },
   });
-  registerStatusEventBridge(ctx, machine);
+  const statusBridge = registerStatusEventBridge(ctx, machine);
+  remote.setAgentSelectionHandler(statusBridge.selectAgent);
   const pushBuddy = async (): Promise<void> => {
     try { publisher.broadcast('buddy', await remote.buddy()); } catch { /* retry next cycle */ }
   };

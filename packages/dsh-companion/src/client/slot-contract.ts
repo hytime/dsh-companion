@@ -17,6 +17,11 @@ export interface SettingsSectionOwnerProps {
 }
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface GlobalStandardProps {
+    /** Current selected session from the Web runtime session source. */
+    useSessions: <T>(selector: (snapshot: { current: string | undefined }) => T) => T;
+  }
+
   interface SlotMap {
     /** 设置面板左侧导航里的一个设置页（列表条目，按 order 排序）。 */
     'settings.section': { kind: 'list'; scope: 'root'; owner: SettingsSectionOwnerProps };

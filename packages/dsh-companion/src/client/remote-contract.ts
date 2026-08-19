@@ -62,6 +62,10 @@ import {
   SET_CONFIG_METHOD,
   SET_CONFIG_PARTIAL_SYMBOL,
   SET_CONFIG_RESULT_SYMBOL,
+  SELECT_AGENT_ENDPOINT_ID,
+  SELECT_AGENT_METHOD,
+  SELECT_AGENT_RESULT_SYMBOL,
+  SELECT_AGENT_SESSION_SYMBOL,
   STATUS_ENDPOINT_ID,
   STATUS_METHOD,
   STATUS_RESULT_SYMBOL,
@@ -193,6 +197,30 @@ const statusDescriptor: InvocationDescriptor = {
   invocation: { kind: 'direct' },
   parameters: [],
   result: { mode: 'strict', typeSymbol: STATUS_RESULT_SYMBOL, schema: statusResult } as TypertCodec,
+};
+
+const selectAgentSessionSchema = schema<string | null>((value) => {
+  if (value !== null && typeof value !== 'string') throw new TypeError('expected sessionId or null');
+  return value;
+});
+
+const selectAgentResult = schema<{ ok: true }>((value) => {
+  if (typeof value !== 'object' || value === null || (value as Record<string, unknown>).ok !== true) {
+    throw new TypeError('expected selectAgent result');
+  }
+  return { ok: true as const };
+});
+
+const selectAgentDescriptor: InvocationDescriptor = {
+  id: SELECT_AGENT_ENDPOINT_ID,
+  service: REMOTE_SERVICE,
+  namespace: REMOTE_NAMESPACE,
+  method: SELECT_AGENT_METHOD,
+  invocation: { kind: 'direct' },
+  parameters: [
+    { name: 'sessionId', wire: 'sessionId', source: 'json', codec: { mode: 'strict', typeSymbol: SELECT_AGENT_SESSION_SYMBOL, schema: selectAgentSessionSchema } as TypertCodec },
+  ],
+  result: { mode: 'strict', typeSymbol: SELECT_AGENT_RESULT_SYMBOL, schema: selectAgentResult } as TypertCodec,
 };
 
 const latestReplyResult = schema<{ reply: string; emotion: string } | null>((value) => {
@@ -473,6 +501,7 @@ export const travelNoteCompanionRemote: TypertRemoteContribution = {
     buddyDescriptor,
     assetDescriptor,
     statusDescriptor,
+    selectAgentDescriptor,
     latestReplyDescriptor,
     authStatusDescriptor,
     loginDescriptor,
