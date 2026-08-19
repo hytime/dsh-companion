@@ -94,7 +94,7 @@ describe('WhaleFloatingWidget', () => {
     );
     act(() => fireEvent.contextMenu(getTrigger(), { clientX: 100, clientY: 100 }));
     expect(screen.queryByText(/hyc chat 超时/)).not.toBeInTheDocument();
-    await user.click(screen.getByRole('menuitem', { name: '和旅伴聊聊' }));
+    await user.click(screen.getByRole('menuitem', { name: '和小小梦聊聊' }));
     expect(onReply).toHaveBeenCalledTimes(1);
   });
 

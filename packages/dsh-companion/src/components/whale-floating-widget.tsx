@@ -191,7 +191,7 @@ export function WhaleFloatingWidget({
         />
       ) : null}
       {contextMenu !== null ? (
-        <WhaleContextMenu left={contextMenu.left} top={contextMenu.top} onChat={handleReply} />
+        <WhaleContextMenu companionName={companionName} left={contextMenu.left} top={contextMenu.top} onChat={handleReply} />
       ) : null}
     </div>
   );
