@@ -70,6 +70,8 @@
   position: absolute;
   left: 0;
   max-width: min(480px, calc(100vw - 32px));
+  min-width: min(220px, calc(100vw - 32px));
+  box-sizing: border-box;
   background: var(--dsw-alias-bg-layer-1);
   border: 1px solid #f2d3d8;
   border-radius: 14px;

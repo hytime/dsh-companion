@@ -247,5 +247,6 @@ describe('companion.css 约束', () => {
       expect(name.startsWith('dsh-companion')).toBe(true);
     }
     expect(css).toContain('prefers-reduced-motion');
+    expect(css).toMatch(/\.dsh-companion-whale__speech\s*\{[\s\S]*min-width:\s*min\(220px, calc\(100vw - 32px\)\)/);
   });
 });
