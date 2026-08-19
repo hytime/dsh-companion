@@ -3,8 +3,9 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { Context } from '@deepseek-ai/cordis';
+import { FRAME_NAMES, type FrameName } from '../../contracts/companion-status';
 import { REMOTE_PACKAGE, REMOTE_SERVICE } from '../../contracts/remote-descriptors';
-import type { StatusUpdate } from '../status-inference';
+import { normalizeStatusUpdate, type StatusUpdate } from '../../utils/status-utils';
 import {
   DEFAULT_SETTINGS,
   type CompanionSettings,
@@ -22,8 +23,6 @@ import {
   type ScheduleListResult,
 } from '../companion-commands';
 import { createDefaultRpcDeps } from './handlers';
-
-export const FRAME_NAMES = ['idle', 'happy', 'smile', 'laugh', 'shy', 'surprised'] as const;
 
 export interface TravelNoteCompanionHostOptions {
   assetRoot?: string;
@@ -90,16 +89,16 @@ export class CompanionRemote extends TypertRemoteService {
   }
 
   setStatus(update: StatusUpdate): void {
-    this.currentStatus = update;
+    this.currentStatus = { ...normalizeStatusUpdate(update) };
   }
 
   getStatus(): StatusUpdate {
-    return this.currentStatus;
+    return { ...this.currentStatus };
   }
 
   @Remote
   async status(): Promise<StatusUpdate> {
-    return this.currentStatus;
+    return this.getStatus();
   }
 
   @Remote
@@ -218,7 +217,7 @@ export class CompanionRemote extends TypertRemoteService {
 
   @Remote
   async asset(frame: string): Promise<{ url: string } | null> {
-    const name = FRAME_NAMES.includes(frame as (typeof FRAME_NAMES)[number]) ? frame : 'idle';
+    const name = FRAME_NAMES.includes(frame as FrameName) ? frame : 'idle';
     return { url: `/plugins/${REMOTE_PACKAGE}/deepseek-girl-phaser/frames/${name}.png` };
   }
 

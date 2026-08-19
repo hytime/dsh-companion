@@ -173,12 +173,14 @@ const assetDescriptor: InvocationDescriptor = {
   result: { mode: 'strict', typeSymbol: ASSET_RESULT_SYMBOL, schema: assetResult } as TypertCodec,
 };
 
-const statusResult = schema<{ status: string; lastError?: string }>((value) => {
+const statusResult = schema<{ status: string; statusMessage?: string; emotion?: string; lastError?: string }>((value) => {
   if (typeof value !== 'object' || value === null) throw new TypeError('expected status object');
   const record = value as Record<string, unknown>;
   if (typeof record.status !== 'string') throw new TypeError('expected status');
   return {
     status: record.status,
+    ...(typeof record.statusMessage === 'string' ? { statusMessage: record.statusMessage } : {}),
+    ...(typeof record.emotion === 'string' ? { emotion: record.emotion } : {}),
     ...(typeof record.lastError === 'string' ? { lastError: record.lastError } : {}),
   };
 });
