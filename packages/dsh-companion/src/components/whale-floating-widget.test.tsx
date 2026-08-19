@@ -194,6 +194,32 @@ describe('WhaleFloatingWidget', () => {
     expect(bubble.style.left).toBe('-350px');
     rect.mockRestore();
   });
+
+  it('收起到顶部 Logo 时回复气泡贴在 Logo 下方', async () => {
+    window.localStorage.setItem('dsh-companion.whale.pos', JSON.stringify({ left: 300, top: 0 }));
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 130,
+      height: 130,
+      top: 0,
+      left: 300,
+      right: 430,
+      bottom: 130,
+      x: 300,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+    const user = userEvent.setup();
+    render(<WhaleFloatingWidget status="idle" latestReply="顶部 Logo 下方的回复" />);
+    const trigger = getTrigger();
+    await user.pointer({ keys: '[MouseLeft>]', target: trigger, coords: { x: 300, y: 0 } });
+    await user.pointer({ coords: { x: 310, y: 0 } });
+    await user.pointer({ keys: '[/MouseLeft]' });
+    const text = await screen.findByText(/顶部 Logo 下方的回复/, undefined, { timeout: 3000 });
+    const bubble = text.parentElement as HTMLElement;
+    expect(bubble.style.top).toBe('50px');
+    expect(bubble.style.bottom).toBe('');
+    rect.mockRestore();
+  });
 });
 
 describe('buddy 提醒 toast（到点弹提醒）', () => {
@@ -247,6 +273,7 @@ describe('companion.css 约束', () => {
       expect(name.startsWith('dsh-companion')).toBe(true);
     }
     expect(css).toContain('prefers-reduced-motion');
-    expect(css).toMatch(/\.dsh-companion-whale__speech\s*\{[\s\S]*min-width:\s*min\(220px, calc\(100vw - 32px\)\)/);
+    expect(css).toMatch(/\.dsh-companion-whale__speech\s*\{[^}]*min-width:\s*min\(220px, calc\(100vw - 32px\)\)/);
+    expect(css).toMatch(/\.dsh-companion-whale__toast\s*\{[^}]*min-width:\s*min\(220px, calc\(100vw - 32px\)\)/);
   });
 });

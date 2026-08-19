@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.16] - 2026-08-19
+
+### Fixed / 修复
+
+- 修复提醒 toast 收起后宽度塌缩到 Logo，以及回复和提醒气泡贴边时出现大间距或顶部被遮挡的问题。 / Fixed reminder toasts collapsing to the logo width and fixed excessive gaps or top-edge clipping for reply and reminder bubbles when docked.
+
 ## [0.1.15] - 2026-08-19
 
 ### Changed / 变更
@@ -36,6 +42,7 @@
 - 修复切换 Agent 后旧 Agent 事件继续更新当前鲸鱼娘状态的问题。 / Fixed events from a previously selected Agent continuing to update the current companion state after switching Agents.
 - 修复 Agent 状态事件处理中的 waterfall 传递，确保后续监听器仍能收到事件。 / Fixed waterfall propagation in Agent status event handling so subsequent listeners continue to receive events.
 
+[0.1.16]: https://github.com/hytime/dsh-companion/releases/tag/v0.1.16
 [0.1.15]: https://github.com/hytime/dsh-companion/releases/tag/v0.1.15
 [0.1.14]: https://github.com/hytime/dsh-companion/releases/tag/v0.1.14
 [0.1.13]: https://github.com/hytime/dsh-companion/releases/tag/v0.1.13

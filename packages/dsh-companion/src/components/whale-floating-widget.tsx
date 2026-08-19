@@ -9,6 +9,8 @@ import { useReplyBubbles } from '../hooks/use-reply-bubbles';
 import { WhaleMessageBubble } from './message-bubble';
 import {
   FIGURE_H,
+  PEEK_H,
+  PEEK_W,
   FIGURE_W,
   POPOVER_EDGE,
   POPOVER_GAP,
@@ -75,6 +77,8 @@ export function WhaleFloatingWidget({
     setPeek,
   });
 
+  const displayPos = peek === null ? position : peekPosition(peek, position);
+
   /** 回复/提醒气泡边界自适应：默认与人物左缘对齐向右展开；
    * 右侧空间不足时向左展开，渲染后按实测校正水平溢出。 */
   useLayoutEffect(() => {
@@ -83,16 +87,18 @@ export function WhaleFloatingWidget({
     const rect = node.getBoundingClientRect();
     const bubbleW = rect.width > 0 ? rect.width : 280;
     const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const widgetW = peek === null ? FIGURE_W : PEEK_W;
+    const widgetLeft = displayPos.left;
     let left = 0;
-    if (position.left + left + bubbleW > viewportW - POPOVER_EDGE) {
-      left = FIGURE_W - bubbleW;
+    if (widgetLeft + left + bubbleW > viewportW - POPOVER_EDGE) {
+      left = widgetW - bubbleW;
     }
     left = Math.max(
-      POPOVER_EDGE - position.left,
-      Math.min(left, viewportW - bubbleW - POPOVER_EDGE - position.left),
+      POPOVER_EDGE - widgetLeft,
+      Math.min(left, viewportW - bubbleW - POPOVER_EDGE - widgetLeft),
     );
     setBubbleLeft(left);
-  }, [replyToast, toast, position]);
+  }, [replyToast, toast, displayPos.left, peek]);
 
   const handleReply = (): void => {
     setContextMenu(null);
@@ -126,10 +132,12 @@ export function WhaleFloatingWidget({
   }, [contextMenu]);
 
   const label = `${companionName}：${STATUS_HINT[status]}`;
-  const displayPos = peek === null ? position : peekPosition(peek, position);
   const typedToast = useTypewriter(toast?.message, 30);
   const typedReplyToast = useTypewriter(replyToast ?? undefined, 30);
-  const toastBottom = FIGURE_H + POPOVER_GAP + 4;
+  const widgetH = peek === null ? FIGURE_H : PEEK_H;
+  const bubbleStyle = peek === 'top'
+    ? { left: bubbleLeft, top: widgetH + POPOVER_GAP + 4 }
+    : { left: bubbleLeft, bottom: widgetH + POPOVER_GAP + 4 };
 
   return (
     <div
@@ -172,7 +180,7 @@ export function WhaleFloatingWidget({
           companionName={companionName}
           text={replyToast}
           typedText={typedReplyToast}
-          style={{ left: bubbleLeft, bottom: toastBottom }}
+          style={bubbleStyle}
           closeLabel="关闭回复"
           onClose={dismissReply}
         />
@@ -185,7 +193,7 @@ export function WhaleFloatingWidget({
           title={toast.title}
           text={toast.message}
           typedText={typedToast}
-          style={{ left: bubbleLeft, bottom: toastBottom }}
+          style={bubbleStyle}
           closeLabel="关闭提醒"
           onClose={dismissToast}
         />
