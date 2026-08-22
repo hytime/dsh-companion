@@ -17,7 +17,7 @@ class WhaleBoundary extends React.Component<{ children: React.ReactNode }, { err
     if (this.state.error !== null) {
       return React.createElement('div', {
         style: {
-          position: 'fixed', right: 16, bottom: 16, zIndex: 2147483000,
+          position: 'fixed', right: 16, bottom: 16, zIndex: 2147483647,
           background: '#fdecea', color: '#b3261e', border: '1px solid #f5c6c2',
           borderRadius: 8, padding: '8px 12px', fontSize: 12, fontFamily: 'sans-serif',
         },

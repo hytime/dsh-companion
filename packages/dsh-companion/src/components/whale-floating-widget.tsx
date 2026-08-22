@@ -1,11 +1,14 @@
 /* eslint-disable @next/next/no-img-element -- 本插件不是 Next.js 项目，使用原生 img 加载鲸鱼娘帧 */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { WhaleContextMenu } from './context-menu';
 import { DeepSeekLogo } from './deepseek-logo';
 import { frameUrl, resolveWhaleFrame } from './expression-map';
 import { useTypewriter } from '../hooks/use-typewriter';
 import { useWidgetDrag } from '../hooks/use-widget-drag';
 import { useReplyBubbles } from '../hooks/use-reply-bubbles';
+import { useWhaleHidden } from '../hooks/use-widget-visibility';
+import { setWhaleHidden } from '../utils/widget-visibility';
 import { WhaleMessageBubble } from './message-bubble';
 import {
   FIGURE_H,
@@ -60,6 +63,8 @@ export function WhaleFloatingWidget({
   const [peek, setPeek] = useState<PeekEdge | null>(null);
   const [contextMenu, setContextMenu] = useState<{ left: number; top: number } | null>(null);
   const [bubbleLeft, setBubbleLeft] = useState(0);
+  const [bubbleTailLeft, setBubbleTailLeft] = useState(24);
+  const hidden = useWhaleHidden();
   const speechRef = useRef<HTMLDivElement | null>(null);
   const toastRef = useRef<HTMLDivElement | null>(null);
   const frame = resolveWhaleFrame(status, emotion);
@@ -97,12 +102,21 @@ export function WhaleFloatingWidget({
       POPOVER_EDGE - widgetLeft,
       Math.min(left, viewportW - bubbleW - POPOVER_EDGE - widgetLeft),
     );
+    const anchorX = widgetLeft + widgetW / 2;
+    const bubbleAbsoluteLeft = widgetLeft + left;
+    const tailLeft = Math.max(16, Math.min(bubbleW - 16, anchorX - bubbleAbsoluteLeft));
     setBubbleLeft(left);
+    setBubbleTailLeft(tailLeft);
   }, [replyToast, toast, displayPos.left, peek]);
 
   const handleReply = (): void => {
     setContextMenu(null);
     onReply?.();
+  };
+
+  const handleHide = (): void => {
+    setContextMenu(null);
+    setWhaleHidden(true);
   };
 
   const openContextMenu = (event: React.MouseEvent<HTMLDivElement>): void => {
@@ -138,6 +152,12 @@ export function WhaleFloatingWidget({
   const bubbleStyle = peek === 'top'
     ? { left: bubbleLeft, top: widgetH + POPOVER_GAP + 4 }
     : { left: bubbleLeft, bottom: widgetH + POPOVER_GAP + 4 };
+  const speechStyle = {
+    ...bubbleStyle,
+    '--dsh-companion-speech-tail-left': `${bubbleTailLeft}px`,
+  } as unknown as CSSProperties;
+
+  if (hidden) return null;
 
   return (
     <div
@@ -180,7 +200,8 @@ export function WhaleFloatingWidget({
           companionName={companionName}
           text={replyToast}
           typedText={typedReplyToast}
-          style={bubbleStyle}
+          style={speechStyle}
+          tailPlacement={peek === 'top' ? 'top' : 'bottom'}
           closeLabel="关闭回复"
           onClose={dismissReply}
         />
@@ -199,7 +220,13 @@ export function WhaleFloatingWidget({
         />
       ) : null}
       {contextMenu !== null ? (
-        <WhaleContextMenu companionName={companionName} left={contextMenu.left} top={contextMenu.top} onChat={handleReply} />
+        <WhaleContextMenu
+          companionName={companionName}
+          left={contextMenu.left}
+          top={contextMenu.top}
+          onChat={handleReply}
+          onHide={handleHide}
+        />
       ) : null}
     </div>
   );

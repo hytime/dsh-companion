@@ -109,6 +109,18 @@ describe('SettingsCard', () => {
     expect(screen.getByText('事件提醒')).toBeInTheDocument();
   });
 
+  it('设置页可以恢复持久隐藏的鲸鱼娘', async () => {
+    window.localStorage.setItem('dsh-companion.whale.hidden', 'true');
+    const user = userEvent.setup();
+    renderCard(createRemote());
+    await screen.findByText('基本配置');
+    const toggle = screen.getByRole('switch', { name: '显示鲸鱼娘' }) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    await user.click(toggle);
+    expect(window.localStorage.getItem('dsh-companion.whale.hidden')).toBeNull();
+    expect(toggle.checked).toBe(true);
+  });
+
   it('登录模式:账号密码为空点提交 → 错误「请输入账号和密码」,不调用 remote.login', async () => {
     const remote = createUnauthenticatedRemote();
     const user = userEvent.setup();

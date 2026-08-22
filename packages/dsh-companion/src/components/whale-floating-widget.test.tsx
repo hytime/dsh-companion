@@ -24,6 +24,7 @@ function getTrigger(): HTMLElement {
 describe('WhaleFloatingWidget', () => {
   afterEach(() => {
     vi.useRealTimers();
+    window.localStorage.removeItem('dsh-companion.whale.hidden');
   });
   it('默认只显示悬浮人物，对话窗未展开', () => {
     render(<WhaleFloatingWidget status="idle" />);
@@ -65,6 +66,16 @@ describe('WhaleFloatingWidget', () => {
     await user.click(screen.getByRole('menuitem', { name: '和旅伴聊聊' }));
     expect(onReply).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('右键隐藏鲸鱼娘并持久化隐藏状态', async () => {
+    const user = userEvent.setup();
+    window.localStorage.clear();
+    render(<WhaleFloatingWidget status="idle" onReply={() => {}} />);
+    act(() => fireEvent.contextMenu(getTrigger(), { clientX: 100, clientY: 100 }));
+    await user.click(screen.getByRole('menuitem', { name: '隐藏鲸鱼娘' }));
+    expect(window.localStorage.getItem('dsh-companion.whale.hidden')).toBe('true');
+    expect(screen.queryByRole('button', { name: /(旅伴|小小梦)：/ })).not.toBeInTheDocument();
   });
 
   it('Escape 关闭右键菜单', async () => {
@@ -192,6 +203,7 @@ describe('WhaleFloatingWidget', () => {
     // 默认位置 left=878（视口 1024 - 人物 130 - 边距 16），气泡宽 480：
     // 878+480 > 1024-8 → 向左展开 left = 130-480 = -350
     expect(bubble.style.left).toBe('-350px');
+    expect(bubble.style.getPropertyValue('--dsh-companion-speech-tail-left')).toBe('415px');
     rect.mockRestore();
   });
 
@@ -218,6 +230,7 @@ describe('WhaleFloatingWidget', () => {
     const bubble = text.parentElement as HTMLElement;
     expect(bubble.style.top).toBe('50px');
     expect(bubble.style.bottom).toBe('');
+    expect(bubble.dataset.tail).toBe('top');
     rect.mockRestore();
   });
 });
@@ -275,5 +288,8 @@ describe('companion.css 约束', () => {
     expect(css).toContain('prefers-reduced-motion');
     expect(css).toMatch(/\.dsh-companion-whale__speech\s*\{[^}]*min-width:\s*min\(220px, calc\(100vw - 32px\)\)/);
     expect(css).toMatch(/\.dsh-companion-whale__toast\s*\{[^}]*min-width:\s*min\(220px, calc\(100vw - 32px\)\)/);
+    expect(css).toMatch(/\.dsh-companion-whale\s*\{[^}]*z-index:\s*2147483647/);
+    expect(css).toContain('--dsh-companion-speech-tail-left');
+    expect(css).toContain("[data-tail='top']");
   });
 });

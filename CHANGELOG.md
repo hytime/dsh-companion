@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.17] - 2026-08-22
+
+### Added / 新增
+
+- 右键菜单新增持久隐藏鲸鱼娘入口，设置页可恢复显示。 / Added persistent whale hiding from the context menu, with restoration available in Settings.
+
+### Changed / 变更
+
+- 将鲸鱼悬浮层、气泡、右键菜单和错误边界提升到最高层级，避免被其他插件遮挡。 / Raised the whale overlay, bubbles, context menu, and error boundary to the highest layer to avoid being covered by other plugins.
+- 让回复和提醒气泡的三角形根据人物或 Logo 位置动态锚定，顶部贴边时自动翻转指向 Logo。 / Made reply and reminder bubble tails dynamically anchor to the whale or logo, flipping at the top edge to point toward the logo.
+
 ## [0.1.16] - 2026-08-19
 
 ### Fixed / 修复
@@ -42,6 +53,7 @@
 - 修复切换 Agent 后旧 Agent 事件继续更新当前鲸鱼娘状态的问题。 / Fixed events from a previously selected Agent continuing to update the current companion state after switching Agents.
 - 修复 Agent 状态事件处理中的 waterfall 传递，确保后续监听器仍能收到事件。 / Fixed waterfall propagation in Agent status event handling so subsequent listeners continue to receive events.
 
+[0.1.17]: https://github.com/hytime/dsh-companion/releases/tag/v0.1.17
 [0.1.16]: https://github.com/hytime/dsh-companion/releases/tag/v0.1.16
 [0.1.15]: https://github.com/hytime/dsh-companion/releases/tag/v0.1.15
 [0.1.14]: https://github.com/hytime/dsh-companion/releases/tag/v0.1.14

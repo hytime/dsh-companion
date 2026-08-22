@@ -17,6 +17,8 @@ import * as React from 'react';
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 import type { CompanionRemoteFace, CompanionSettings, ScheduleItem, ScheduleListResult } from '../client/companion-types';
 import { DeepSeekLogo } from './deepseek-logo';
+import { useWhaleHidden } from '../hooks/use-widget-visibility';
+import { setWhaleHidden } from '../utils/widget-visibility';
 import type {} from '../client/slot-contract';
 import styles from '../styles/companion.module.css';
 
@@ -48,6 +50,7 @@ function scheduleMeta(item: ScheduleItem): string {
 
 export function SettingsCard(props: SettingsCardProps): React.ReactElement {
   const { remote } = props;
+  const whaleHidden = useWhaleHidden();
 
   // ---- 初始数据（并行加载，任何一路失败不阻塞其余区块） ----
   const [loadState, setLoadState] = React.useState<LoadState>('loading');
@@ -441,6 +444,16 @@ export function SettingsCard(props: SettingsCardProps): React.ReactElement {
         <label className={styles['dsh-companion-settings-card__field']}>
           <span className={styles['dsh-companion-settings-card__label']}>对你的称呼</span>
           <input value={userCallName} onChange={(event) => setUserCallName(event.target.value)} />
+        </label>
+        <label className={styles['dsh-companion-settings-card__field']}>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={!whaleHidden}
+            aria-label="显示鲸鱼娘"
+            onChange={(event) => setWhaleHidden(!event.target.checked)}
+          />
+          <span className={styles['dsh-companion-settings-card__label']}>显示鲸鱼娘</span>
         </label>
         <label className={styles['dsh-companion-settings-card__field']}>
           <input

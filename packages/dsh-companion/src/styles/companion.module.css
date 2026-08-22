@@ -2,7 +2,7 @@
 
 .dsh-companion-whale {
   position: fixed;
-  z-index: 2147483000;
+  z-index: 2147483647;
   cursor: grab;
   user-select: none;
   font-family: -apple-system, 'Segoe UI', 'PingFang SC', sans-serif;
@@ -44,7 +44,7 @@
   padding: 10px 12px;
   font-size: 12px;
   line-height: 1.5;
-  z-index: 2;
+  z-index: 2147483647;
 }
 
 .dsh-companion-whale__toast-title {
@@ -81,20 +81,27 @@
   padding: 10px 14px;
   font-size: 12px;
   line-height: 1.5;
-  z-index: 3;
+  z-index: 2147483647;
 }
 
 .dsh-companion-whale__speech::after {
   content: '';
   position: absolute;
   bottom: -8px;
-  left: 24px;
+  left: var(--dsh-companion-speech-tail-left, 24px);
   width: 0;
   height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
   border-top: 8px solid #ffffff;
   filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.06));
+}
+
+.dsh-companion-whale__speech[data-tail='top']::after {
+  top: -8px;
+  bottom: auto;
+  border-top: 0;
+  border-bottom: 8px solid #ffffff;
 }
 
 .dsh-companion-whale__speech-name {
@@ -440,7 +447,7 @@
 
 .dsh-companion-context-menu {
   position: fixed;
-  z-index: 2147483100;
+  z-index: 2147483647;
   min-width: 132px;
   padding: 4px;
   border: 1px solid var(--dsw-alias-border-l1);

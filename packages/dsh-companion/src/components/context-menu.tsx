@@ -6,9 +6,10 @@ export interface WhaleContextMenuProps {
   left: number;
   top: number;
   onChat: () => void;
+  onHide: () => void;
 }
 
-export function WhaleContextMenu({ companionName, left, top, onChat }: WhaleContextMenuProps): React.ReactElement {
+export function WhaleContextMenu({ companionName, left, top, onChat, onHide }: WhaleContextMenuProps): React.ReactElement {
   return (
     <div
       role="menu"
@@ -19,6 +20,9 @@ export function WhaleContextMenu({ companionName, left, top, onChat }: WhaleCont
     >
       <button type="button" role="menuitem" onClick={onChat}>
         和{companionName}聊聊
+      </button>
+      <button type="button" role="menuitem" onClick={onHide}>
+        隐藏鲸鱼娘
       </button>
     </div>
   );

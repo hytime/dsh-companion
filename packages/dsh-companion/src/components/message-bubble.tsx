@@ -10,18 +10,20 @@ export interface MessageBubbleProps {
   text: string;
   typedText: string | undefined;
   style: React.CSSProperties;
+  tailPlacement?: 'top' | 'bottom';
   closeLabel: string;
   onClose: () => void;
 }
 
 export const WhaleMessageBubble = React.forwardRef<HTMLDivElement, MessageBubbleProps>(
-  function WhaleMessageBubble({ kind, companionName, title, text, typedText, style, closeLabel, onClose }, ref) {
+  function WhaleMessageBubble({ kind, companionName, title, text, typedText, style, tailPlacement = 'bottom', closeLabel, onClose }, ref) {
     const isReply = kind === 'reply';
     return (
       <div
         ref={ref}
         className={styles[isReply ? 'dsh-companion-whale__speech' : 'dsh-companion-whale__toast']}
         style={style}
+        data-tail={isReply ? tailPlacement : undefined}
         onClick={(event) => event.stopPropagation()}
       >
         {isReply ? (
